@@ -5,6 +5,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                          fmethod = c("ets", "arima", "rw"), 
                          algorithms = c("lu", "cg", "chol", "recursive", "slm"),
                          keep.fitted = FALSE, keep.resid = FALSE,
+                         keep.model = FALSE, keep.intervals = FALSE,
                          positive = FALSE, lambda = NULL, level, 
                          weights = c("sd", "none", "nseries"),
                          parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -94,25 +95,34 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     if (is.null(FUN)) {
       if (fmethod == "ets") {
         models <- ets(x, lambda = lambda, ...)
-        out$pfcasts <- forecast(models, h = h, PI = FALSE)$mean
+		fc <- ifelse(keep.intervals,forecast(models, h=h),forecast(models, h=h, PI=FALSE))
       } else if (fmethod == "arima") {
         models <- auto.arima(x, lambda = lambda, xreg = xreg, 
                              parallel = FALSE, ...)
-        out$pfcasts <- forecast(models, h = h, xreg = newxreg)$mean
+		fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
-        models <- rwf(x, h = h, lambda = lambda, ...)
-        out$pfcasts <- models$mean
+        fc <- rwf(x, h = h, lambda = lambda, ...)
       }
     } else { # user defined function to produce point forecasts
       models <- FUN(x, ...)
-      out$pfcasts <- forecast(models, h = h)$mean
+      fc <- forecast(models, h = h)
     }
+	out$pfcasts <- fc$mean
     if (keep.fitted) {
-      out$fitted <- fitted(models)
+      out$fitted <- fitted(fc)
     }
     if (keep.resid) {
-      out$resid <- residuals(models)
+      out$resid <- residuals(fc)
     }
+    if (keep.model) {
+      out$model <- fc$model
+    }
+    if (keep.intervals) {
+	  # These should really be weighted by the resulting method factors
+      out$upper <- fc$upper
+      out$lower <- fc$lower
+    }
+
     return(out)
   }
 
