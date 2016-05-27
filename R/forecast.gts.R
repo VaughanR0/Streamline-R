@@ -6,7 +6,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                          algorithms = c("lu", "cg", "chol", "recursive", "slm"),
                          keep.fitted = FALSE, keep.resid = FALSE,
                          keep.model = FALSE, keep.intervals = FALSE,
-						 do.seasonal = FALSE,
+                         do.season = FALSE,
                          positive = FALSE, lambda = NULL, level, 
                          weights = c("sd", "none", "nseries"),
                          parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -19,7 +19,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   #   method: Aggregated approaches.
   #   fmethod: Forecast methods.
   #   keep: Users specify what they'd like to keep at the bottom level.
-  #   do.seasonal: Allow use of lower level seasonal models even if top level is not seasonal
+  #   do.season: Allow use of lower level seasonal models even if top level is not seasonal
   #   positive & lambda: Use Box-Cox transformation.
   #   level: Specify level for the middle-out approach, starting with level 0.
   #
@@ -90,23 +90,33 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   } else if (method == "mo") {
     y <- aggts(object, levels = level)
   }
+  allnames <- colnames(y)
+  level0.seas <- TRUE
 
   # Different version of loopfn which can determine when we are doing level0
   # which enables special treatment of seasonality at lower levels
   seasfn <- function(xall, n, i, ...) {
-	level0 <- ifelse(n[[i]] == "Total", TRUE, FALSE)
+    out <- list()
+    x <- xall[,i]
+	print(paste("seasfn: structure of x", str(x)))
+    if (n[[i]] == "Total") {
+      level0 <- TRUE
+    } else {
+      level0 <- FALSE
+    }
     if (is.null(FUN)) {
       if (fmethod == "ets") {
-				if (level0) {
-					modelspec = "ZZZ"
-				} else {
-					# Disallow seasonal models if level 0 is not seasonal
-					modelspec <- ifelse(level0.seas, "ZZZ", "ZZN")
+        # Disallow seasonal models if level 0 is not seasonal
+        if (level0.seas) {
+          modelspec <- "ZZZ"
+        } else {
+          modelspec <- "ZZN"
         }
         print(paste("Loopfn: using ets: model specification", modelspec))
         models <- ets(x, model=modelspec, lambda = lambda, ...)
         if (level0) {
-          level0.seas = isSeasonal(models, "ets")
+          level0.seas <<- isSeasonal(models, "ets")
+          print(paste("seasfn: ets: is seasonal returned", level0.seas))
         }
         if (keep.intervals) {
           fc <- forecast(models, h= h)
@@ -116,9 +126,11 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       } else if (fmethod == "arima") {
         if (level0) {
           models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
-          level0.seas = isSeasonal(models, "arima")
+          level0.seas <<- isSeasonal(models, "arima")
+          print(paste("seasfn: arima: is seasonal returned", level0.seas))
         } else {
-          allow.seas <- ifelse(level0.seas, FALSE, TRUE)
+          # This works as they are all logicals
+          allow.seas <- ifelse(level0.seas, TRUE, FALSE)
           print(paste("Loopfn: using auto.arima: allow seasonal", allow.seas))
           models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
         }
@@ -151,14 +163,14 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     out <- list()
     if (is.null(FUN)) {
       if (fmethod == "ets") {
-        models <- ets(x, model=modelspec, lambda = lambda, ...)
+        models <- ets(x, lambda = lambda, ...)
         if (keep.intervals) {
           fc <- forecast(models, h= h)
         } else {
           fc <- forecast(models, h=h, PI=FALSE)
         }
       } else if (fmethod == "arima") {
-	    models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+        models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
         fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
         fc <- rwf(x, h = h, lambda = lambda, ...)
@@ -230,18 +242,18 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   bnames <- colnames(object$bts)
 
   if (method == "comb") { # Assign class
-  class(pfcasts) <- class(object)
-  if (keep.fitted) {
+    class(pfcasts) <- class(object)
+    if (keep.fitted) {
       class(fits) <- class(object)
-  }
-  if (keep.resid) {
+    }
+    if (keep.resid) {
       class(resid) <- class(object)
     }
     if (keep.intervals) {
       class(upper) <- class(object)
       class(lower) <- class(object)
     }
-	if (weights == "nseries") {
+    if (weights == "nseries") {
       if (is.hts(object)) {
         wvec <- InvS4h(object$nodes)
       } else {
@@ -269,7 +281,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       bfcasts <- Comb(pfcasts, weights = wvec, keep = "bottom", 
                       algorithms = alg)
     } 
-	if (keep.fitted) {
+  if (keep.fitted) {
       if (weights == "none") {
         fits <- Comb(fits, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
@@ -277,7 +289,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                      algorithms = alg)
       } 
     }
-	if (keep.resid) {
+  if (keep.resid) {
       if (weights == "none") {
         resid <- Comb(resid, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
@@ -285,7 +297,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                       algorithms = alg)
       } 
     }
-	if (keep.intervals) {
+  if (keep.intervals) {
       if (weights == "none") {
         upper <- Comb(upper, keep = "bottom", algorithms = alg)
         lower <- Comb(lower, keep = "bottom", algorithms = alg)
@@ -367,6 +379,13 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     bresid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
     colnames(bresid) <- bnames
   }
+  if (keep.model) {
+	if (fmethod == "arima") {
+      names(model) <- allnames
+    } else if (fmethod == "ets") {
+	  colnames(model) <- allnames
+    }
+  }
   if (keep.intervals) {
     bupper <- ts(upper, start = tsp.y[1L], frequency = tsp.y[3L])
     colnames(bupper) <- bnames
@@ -383,14 +402,13 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   if (keep.resid) {
     out$residuals <- bresid
   }
-    if (keep.model) {
-      out$model <- model
-    }
-    if (keep.intervals) {
-	  # These should really be weighted by the resulting method factors
-      out$upper <- upper
-      out$lower <- lower
-    }
+  if (keep.model) {
+    out$model <- model
+  }
+  if (keep.intervals) {
+    out$upper <- bupper
+    out$lower <- blower
+  }
 
   if (is.hts(object)) {
     out$nodes <- object$nodes
