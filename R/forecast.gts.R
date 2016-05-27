@@ -93,8 +93,8 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
 
   # Different version of loopfn which can determine when we are doing level0
   # which enables special treatment of seasonality at lower levels
-  seasfn <- function(xall, n, i, ...) {  
-		level0 <- ifelse(n[[i]] == "Total", TRUE, FALSE)
+  seasfn <- function(xall, n, i, ...) {
+	level0 <- ifelse(n[[i]] == "Total", TRUE, FALSE)
     if (is.null(FUN)) {
       if (fmethod == "ets") {
 				if (level0) {
@@ -147,7 +147,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     return(out)
   }
   # loop function to grab pf, fitted, resid
-  loopfn <- function(x, ...) {  
+  loopfn <- function(x, ...) {
     out <- list()
     if (is.null(FUN)) {
       if (fmethod == "ets") {
@@ -158,8 +158,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
           fc <- forecast(models, h=h, PI=FALSE)
         }
       } else if (fmethod == "arima") {
-          models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
-        }
+	    models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
         fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
         fc <- rwf(x, h = h, lambda = lambda, ...)
@@ -230,17 +229,19 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   tsp.y <- tsp(y)
   bnames <- colnames(object$bts)
 
-    class(pfcasts) <- class(object)
-    if (keep.fitted) {
+  if (method == "comb") { # Assign class
+  class(pfcasts) <- class(object)
+  if (keep.fitted) {
       class(fits) <- class(object)
-    }
-    if (keep.resid) {
+  }
+  if (keep.resid) {
       class(resid) <- class(object)
     }
     if (keep.intervals) {
       class(upper) <- class(object)
       class(lower) <- class(object)
     }
+	if (weights == "nseries") {
       if (is.hts(object)) {
         wvec <- InvS4h(object$nodes)
       } else {
@@ -251,6 +252,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       wvec <- 1/sqrt(colMeans(tmp.resid^2, na.rm = TRUE))
     }
   }
+
   # An internal function to call combinef correctly
   Comb <- function(x, ...) {
     if (is.hts(x)) {
@@ -260,12 +262,14 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
   }
 
+  if (method == "comb") {
     if (weights == "none") {
       bfcasts <- Comb(pfcasts, keep = "bottom", algorithms = alg)
     } else if (any(weights == c("sd", "nseries"))) {
       bfcasts <- Comb(pfcasts, weights = wvec, keep = "bottom", 
                       algorithms = alg)
     } 
+	if (keep.fitted) {
       if (weights == "none") {
         fits <- Comb(fits, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
@@ -273,6 +277,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                      algorithms = alg)
       } 
     }
+	if (keep.resid) {
       if (weights == "none") {
         resid <- Comb(resid, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
@@ -280,6 +285,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                       algorithms = alg)
       } 
     }
+	if (keep.intervals) {
       if (weights == "none") {
         upper <- Comb(upper, keep = "bottom", algorithms = alg)
         lower <- Comb(lower, keep = "bottom", algorithms = alg)
@@ -288,6 +294,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         lower <- Comb(lower, weights = wvec, keep = "bottom", algorithms = alg)
       } 
     }
+  } else if (method == "bu") {
     bfcasts <- pfcasts
   } else if (method == "tdgsa") {
     bfcasts <- TdGsA(pfcasts, object$bts, y)
