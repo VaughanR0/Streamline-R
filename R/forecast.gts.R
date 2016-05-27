@@ -6,7 +6,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                          algorithms = c("lu", "cg", "chol", "recursive", "slm"),
                          keep.fitted = FALSE, keep.resid = FALSE,
                          keep.model = FALSE, keep.intervals = FALSE,
-						 enable.Seasonal = FALSE,
+						 do.seasonal = FALSE,
                          positive = FALSE, lambda = NULL, level, 
                          weights = c("sd", "none", "nseries"),
                          parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -19,7 +19,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   #   method: Aggregated approaches.
   #   fmethod: Forecast methods.
   #   keep: Users specify what they'd like to keep at the bottom level.
-  #   enableSeasonal: Allow use of lower level seasonal models even if top level is not seasonal
+  #   do.seasonal: Allow use of lower level seasonal models even if top level is not seasonal
   #   positive & lambda: Use Box-Cox transformation.
   #   level: Specify level for the middle-out approach, starting with level 0.
   #
@@ -90,17 +90,15 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   } else if (method == "mo") {
     y <- aggts(object, levels = level)
   }
-  # Display structure of y for debugging
-  # print(str(y))
 
   # Create global variable for seasonality of total level
-  # This does not work too well
+  # This does not work too well, ideally would use the results of model
+  # but dont want to do that work twice
   seasfn <- function(xall, n, i, ...) {  
 	# print(paste("index is", i))
     x <- xall[,i]
 	nme <- n[[i]]
-	# print(str(x))
-	if (nme == "Total") {
+	if (nme == "Total" && !do.seasonal) {
 		# define this variable in the global environment (not pretty)
 		# finds the frequency period of the data using spectral methods,
 		# if it is greater than 1 it has some frequency, 12 would be a monthly frequency
@@ -122,7 +120,6 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
 		} else {
 		  fc <- forecast(models, h=h, PI=FALSE)
 		}
-		# fc <- ifelse(keep.intervals,forecast(models, h=h),forecast(models, h=h, PI=FALSE))
       } else if (fmethod == "arima") {
 		allow.seas <- ifelse(level0.freq == 1, FALSE, TRUE)
 	    print(paste("Loopfn: using auto.arima: allow seasonal", allow.seas))
