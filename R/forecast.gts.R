@@ -6,6 +6,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                          algorithms = c("lu", "cg", "chol", "recursive", "slm"),
                          keep.fitted = FALSE, keep.resid = FALSE,
                          keep.model = FALSE, keep.intervals = FALSE,
+						 enable.Seasonal = FALSE,
                          positive = FALSE, lambda = NULL, level, 
                          weights = c("sd", "none", "nseries"),
                          parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -18,6 +19,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   #   method: Aggregated approaches.
   #   fmethod: Forecast methods.
   #   keep: Users specify what they'd like to keep at the bottom level.
+  #   enableSeasonal: Allow use of lower level seasonal models even if top level is not seasonal
   #   positive & lambda: Use Box-Cox transformation.
   #   level: Specify level for the middle-out approach, starting with level 0.
   #
@@ -88,16 +90,40 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   } else if (method == "mo") {
     y <- aggts(object, levels = level)
   }
+  # Display structure of y for debugging
+  print(str(y))
 
+  # Create global variable for seasonality of total level
+  # This does not work too well
+  seasfn <- function(xall, n, i, ...) {  
+	print(paste("index is", i))
+    x <- xall[,i]
+	nme <- n[[i]]
+	print(str(x))
+	if (nme == "Total") {
+		# define this variable in the global environment (not pretty)
+		# finds the frequency period of the data using spectral methods,
+		# if it is greater than 1 it has some frequency, 12 would be a monthly frequency
+		level0.freq <<- as.numeric(findfrequency(x))
+		print(paste("Frequency of data at Level 0 is", level0.freq))
+	}
+  }
   # loop function to grab pf, fitted, resid
   loopfn <- function(x, ...) {  
     out <- list()
+	print(paste("Loopfn: using forecast method", fmethod))
+	print(paste("Loopfn: Level0 frequency is", level0.freq))
     if (is.null(FUN)) {
       if (fmethod == "ets") {
-        models <- ets(x, lambda = lambda, ...)
+		# Disallow seasonal models if level 0 is not seasonal
+		modelspec <- ifelse(level0.freq == 1, "ZZN", "ZZZ")
+	    print(paste("Loopfn: ets: model specification", modelspec))
+        models <- ets(x, model=modelspec, lambda = lambda, ...)
 		fc <- ifelse(keep.intervals,forecast(models, h=h),forecast(models, h=h, PI=FALSE))
       } else if (fmethod == "arima") {
-        models <- auto.arima(x, lambda = lambda, xreg = xreg, 
+		allow.seas <- ifelse(level0.freq == 1, FALSE, TRUE)
+	    print(paste("Loopfn: auto.arima: allow seasonal", allow.seas))
+        models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, 
                              parallel = FALSE, ...)
 		fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
@@ -139,16 +165,36 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                            simplify = FALSE)
     stopCluster(cl = cl)
   } else {  # parallel = FALSE
+	lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
+	# Calls the loopfn as an anonymous function for each vector in y
+	# and returns a list
+    # Could just be as loopfn is defined above
+	# loopout <- lapply(y, loopfn)
     loopout <- lapply(y, function(x) loopfn(x, ...))
   }
 
   pfcasts <- sapply(loopout, function(x) x$pfcasts)
+  print("Structure of pfcasts")
+  print(str(pfcasts))
   if (keep.fitted) {
     fits <- sapply(loopout, function(x) x$fitted)
   }
+  print("Structure of fits")
+  print(str(fits))
   if (keep.resid) {
     resid <- sapply(loopout, function(x) x$resid)
   }
+  print("Structure of resid")
+  print(str(resid))
+  if (keep.model) {
+    model <- sapply(loopout, function(x) x$model)
+  }
+  if (keep.intervals) {
+    upper <- sapply(loopout, function(x) x$upper)
+    lower <- sapply(loopout, function(x) x$lower)
+  }
+  print("Structure of upper")
+  print(str(upper))
 
   if (is.vector(pfcasts)) {  # if h = 1, sapply returns a vector
     pfcasts <- t(pfcasts)
@@ -158,6 +204,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   tsp.y <- tsp(y)
   bnames <- colnames(object$bts)
 
+  print("Assigning classes")
   if (method == "comb") {  # Assign class
     class(pfcasts) <- class(object)
     if (keep.fitted) {
@@ -166,6 +213,11 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     if (keep.resid) {
       class(resid) <- class(object)
     }
+    if (keep.intervals) {
+      class(upper) <- class(object)
+      class(lower) <- class(object)
+    }
+    print(paste("Done classes weights are", weights))
     if (weights == "nseries") {
       if (is.hts(object)) {
         wvec <- InvS4h(object$nodes)
@@ -173,10 +225,15 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         wvec <- InvS4g(object$groups)
       }
     } else if (weights == "sd") {
+	  print("Structure of y")
+	  print(str(y))
+	  print("Structure of fits")
+	  print(str(fits))
       tmp.resid <- y - fits # it ensures resids are additive errors
       wvec <- 1/sqrt(colMeans(tmp.resid^2, na.rm = TRUE))
     }
   }
+  print("Done assigning classes")
 
   # An internal function to call combinef correctly
   Comb <- function(x, ...) {
@@ -187,13 +244,17 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
   }
 
+  print("forecast: starting to combine levels")
   if (method == "comb") {
+	  print(str(pfcasts))
+	  print(paste("algorithm:", alg))
     if (weights == "none") {
       bfcasts <- Comb(pfcasts, keep = "bottom", algorithms = alg)
     } else if (any(weights == c("sd", "nseries"))) {
       bfcasts <- Comb(pfcasts, weights = wvec, keep = "bottom", 
                       algorithms = alg)
     } 
+	print("Forecast: combine forecasts done")
     if (keep.fitted) {
       if (weights == "none") {
         fits <- Comb(fits, keep = "bottom", algorithms = alg)
@@ -202,6 +263,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                      algorithms = alg)
       } 
     }
+	print("Forecast: combine fitted done")
     if (keep.resid) {
       if (weights == "none") {
         resid <- Comb(resid, keep = "bottom", algorithms = alg)
@@ -210,6 +272,17 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                       algorithms = alg)
       } 
     }
+	print("Forecast: combine residuals done")
+    if (keep.intervals) {
+      if (weights == "none") {
+        upper <- Comb(upper, keep = "bottom", algorithms = alg)
+        lower <- Comb(lower, keep = "bottom", algorithms = alg)
+      } else if (any(weights == c("sd", "nseries"))) {
+        upper <- Comb(upper, weights = wvec, keep = "bottom", algorithms = alg)
+        lower <- Comb(lower, weights = wvec, keep = "bottom", algorithms = alg)
+      } 
+    }
+	print("Forecast: combine intervals done")
   } else if (method == "bu") {
     bfcasts <- pfcasts
   } else if (method == "tdgsa") {
@@ -220,6 +293,10 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     if (keep.resid) {
       resid <- TdGsA(resid, object$bts, y)
     }
+    if (keep.intervals) {
+      upper <- TdGsA(upper, object$bts, y)
+      lower <- TdGsA(lower, object$bts, y)
+    }
   } else if (method == "tdgsf") {
     bfcasts <- TdGsF(pfcasts, object$bts, y)
     if (keep.fitted) {
@@ -227,6 +304,10 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
     if (keep.resid) {
       resid <- TdGsF(resid, object$bts, y)
+    }
+    if (keep.intervals) {
+      upper <- TdGsF(upper, object$bts, y)
+      lower <- TdGsF(lower, object$bts, y)
     }
   } else if (method == "tdfp") {
     bfcasts <- TdFp(pfcasts, object$nodes)
@@ -236,6 +317,10 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     if (keep.resid) {
       resid <- TdFp(resid, object$nodes)
     }
+    if (keep.intervals) {
+      upper <- TdFp(upper, object$nodes)
+      lower <- TdFp(lower, object$nodes)
+    }
   } else if (method == "mo") {
     bfcasts <- MiddleOut(pfcasts, mo.nodes)
     if (keep.fitted) {
@@ -243,6 +328,10 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
     if (keep.resid) {
       resid <- MiddleOut(resid, mo.nodes)
+    }
+    if (keep.intervals) {
+      upper <- MiddleOut(upper, mo.nodes)
+      lower <- MiddleOut(lower, mo.nodes)
     }
   }
 
@@ -267,6 +356,12 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     bresid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
     colnames(bresid) <- bnames
   }
+  if (keep.intervals) {
+    bupper <- ts(upper, start = tsp.y[1L], frequency = tsp.y[3L])
+    colnames(bupper) <- bnames
+    blower <- ts(lower, start = tsp.y[1L], frequency = tsp.y[3L])
+    colnames(blower) <- bnames
+  }
 
   # Output
   out <- list(bts = bfcasts, histy = object$bts, labels = object$labels,
@@ -277,6 +372,15 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   if (keep.resid) {
     out$residuals <- bresid
   }
+    if (keep.model) {
+      out$model <- model
+    }
+    if (keep.intervals) {
+	  # These should really be weighted by the resulting method factors
+      out$upper <- upper
+      out$lower <- lower
+    }
+
   if (is.hts(object)) {
     out$nodes <- object$nodes
   } else {
