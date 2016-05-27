@@ -91,41 +91,38 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     y <- aggts(object, levels = level)
   }
 
-  # Create global variable for seasonality of total level
-  # This does not work too well, ideally would use the results of model
-  # but dont want to do that work twice
+  # Different version of loopfn which can determine when we are doing level0
+  # which enables special treatment of seasonality at lower levels
   seasfn <- function(xall, n, i, ...) {  
-	# print(paste("index is", i))
-    x <- xall[,i]
-	nme <- n[[i]]
-	if (nme == "Total" && !do.seasonal) {
-		# define this variable in the global environment (not pretty)
-		# finds the frequency period of the data using spectral methods,
-		# if it is greater than 1 it has some frequency, 12 would be a monthly frequency
-		level0.freq <<- as.numeric(findfrequency(x))
-		print(paste("Frequency of data at Level 0 is", level0.freq))
-	}
-  }
-  # loop function to grab pf, fitted, resid
-  loopfn <- function(x, ...) {  
-    out <- list()
+		level0 <- ifelse(n[[i]] == "Total", TRUE, FALSE)
     if (is.null(FUN)) {
       if (fmethod == "ets") {
-		# Disallow seasonal models if level 0 is not seasonal
-		modelspec <- ifelse(level0.freq == 1, "ZZN", "ZZZ")
-	    print(paste("Loopfn: using ets: model specification", modelspec))
+				if (level0) {
+					modelspec = "ZZZ"
+				} else {
+					# Disallow seasonal models if level 0 is not seasonal
+					modelspec <- ifelse(level0.seas, "ZZZ", "ZZN")
+        }
+        print(paste("Loopfn: using ets: model specification", modelspec))
         models <- ets(x, model=modelspec, lambda = lambda, ...)
-		if (keep.intervals) {
-		  fc <- forecast(models, h= h)
-		} else {
-		  fc <- forecast(models, h=h, PI=FALSE)
-		}
+        if (level0) {
+          level0.seas = isSeasonal(models, "ets")
+        }
+        if (keep.intervals) {
+          fc <- forecast(models, h= h)
+        } else {
+          fc <- forecast(models, h=h, PI=FALSE)
+        }
       } else if (fmethod == "arima") {
-		allow.seas <- ifelse(level0.freq == 1, FALSE, TRUE)
-	    print(paste("Loopfn: using auto.arima: allow seasonal", allow.seas))
-        models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, 
-                             parallel = FALSE, ...)
-		fc <- forecast(models, h = h, xreg = newxreg)
+        if (level0) {
+          models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+          level0.seas = isSeasonal(models, "arima")
+        } else {
+          allow.seas <- ifelse(level0.seas, FALSE, TRUE)
+          print(paste("Loopfn: using auto.arima: allow seasonal", allow.seas))
+          models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+        }
+        fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
         fc <- rwf(x, h = h, lambda = lambda, ...)
       }
@@ -133,7 +130,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       models <- FUN(x, ...)
       fc <- forecast(models, h = h)
     }
-	out$pfcasts <- fc$mean
+    out$pfcasts <- fc$mean
     if (keep.fitted) {
       out$fitted <- fitted(models)
     }
@@ -144,11 +141,47 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       out$model <- models
     }
     if (keep.intervals) {
-	  # These should really be weighted by the resulting method factors
       out$upper <- fc$upper
       out$lower <- fc$lower
     }
-
+    return(out)
+  }
+  # loop function to grab pf, fitted, resid
+  loopfn <- function(x, ...) {  
+    out <- list()
+    if (is.null(FUN)) {
+      if (fmethod == "ets") {
+        models <- ets(x, model=modelspec, lambda = lambda, ...)
+        if (keep.intervals) {
+          fc <- forecast(models, h= h)
+        } else {
+          fc <- forecast(models, h=h, PI=FALSE)
+        }
+      } else if (fmethod == "arima") {
+          models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+        }
+        fc <- forecast(models, h = h, xreg = newxreg)
+      } else if (fmethod == "rw") {
+        fc <- rwf(x, h = h, lambda = lambda, ...)
+      }
+    } else { # user defined function to produce point forecasts
+      models <- FUN(x, ...)
+      fc <- forecast(models, h = h)
+    }
+    out$pfcasts <- fc$mean
+    if (keep.fitted) {
+      out$fitted <- fitted(models)
+    }
+    if (keep.resid) {
+      out$resid <- residuals(models)
+    }
+    if (keep.model) {
+      out$model <- models
+    }
+    if (keep.intervals) {
+      out$upper <- fc$upper
+      out$lower <- fc$lower
+    }
     return(out)
   }
 
@@ -165,12 +198,13 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
                            simplify = FALSE)
     stopCluster(cl = cl)
   } else {  # parallel = FALSE
-	lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
-	# Calls the loopfn as an anonymous function for each vector in y
-	# and returns a list
-    # Could just be as loopfn is defined above
-	# loopout <- lapply(y, loopfn)
-    loopout <- lapply(y, function(x) loopfn(x, ...))
+    if (do.season) {
+      # do seasonal at any level
+      loopout <- lapply(y, function(x) loopfn(x, ...))
+    } else {
+      # only do seasonal at other levels if top level is seasonal
+      loopout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
+    }
   }
 
   pfcasts <- sapply(loopout, function(x) x$pfcasts)
