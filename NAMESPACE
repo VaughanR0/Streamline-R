@@ -1,0 +1,29 @@
+export(
+hts,
+gts,
+print.gts,
+aggts,
+allts,
+forecast.gts,
+window.gts,
+accuracy.gts,
+plot.gts,
+summary.gts,
+combinef,
+smatrix
+)
+
+S3method(print, gts)
+S3method(forecast, gts)
+S3method(window, gts)
+S3method(plot, gts)
+S3method(summary, gts)
+
+import(forecast)
+import(SparseM)
+import(parallel)
+import(Matrix)
+importFrom("stats", "window")
+importFrom("utils", "combn")
+
+useDynLib(hts2)

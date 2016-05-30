@@ -115,7 +115,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         models <- ets(x, model=modelspec, lambda = lambda, ...)
         if (level0) {
           level0.seas <<- isSeasonal(models, "ets")
-          print(paste("seasfn: ets: is seasonal returned", level0.seas))
+          print(paste("seasfn: ets: is seasonal at top level returned", level0.seas))
         }
         if (keep.intervals) {
           fc <- forecast(models, h= h)
@@ -126,7 +126,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         if (level0) {
           models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
           level0.seas <<- isSeasonal(models, "arima")
-          print(paste("seasfn: arima: is seasonal returned", level0.seas))
+          print(paste("seasfn: arima: is seasonal at top level returned", level0.seas))
         } else {
           # This works as they are all logicals
           allow.seas <- ifelse(level0.seas, TRUE, FALSE)
