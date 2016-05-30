@@ -98,7 +98,6 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   seasfn <- function(xall, n, i, ...) {
     out <- list()
     x <- xall[,i]
-	print(paste("seasfn: structure of x", str(x)))
     if (n[[i]] == "Total") {
       level0 <- TRUE
     } else {
@@ -112,7 +111,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         } else {
           modelspec <- "ZZN"
         }
-        print(paste("Loopfn: using ets: model specification", modelspec))
+        # print(paste("seasfn: using ets: model specification", modelspec))
         models <- ets(x, model=modelspec, lambda = lambda, ...)
         if (level0) {
           level0.seas <<- isSeasonal(models, "ets")
@@ -131,11 +130,12 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
         } else {
           # This works as they are all logicals
           allow.seas <- ifelse(level0.seas, TRUE, FALSE)
-          print(paste("Loopfn: using auto.arima: allow seasonal", allow.seas))
+          # print(paste("seasfn: using auto.arima: allow seasonal", allow.seas))
           models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
         }
         fc <- forecast(models, h = h, xreg = newxreg)
       } else if (fmethod == "rw") {
+	    # random walk method
         fc <- rwf(x, h = h, lambda = lambda, ...)
       }
     } else { # user defined function to produce point forecasts
@@ -150,7 +150,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       out$resid <- residuals(models)
     }
     if (keep.model) {
-      out$model <- models
+      out$model <- stdModel(models,fmethod)
     }
     if (keep.intervals) {
       out$upper <- fc$upper
@@ -187,7 +187,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
       out$resid <- residuals(models)
     }
     if (keep.model) {
-      out$model <- models
+      out$model <- stdModel(models,fmethod)
     }
     if (keep.intervals) {
       out$upper <- fc$upper
@@ -380,10 +380,8 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     colnames(bresid) <- bnames
   }
   if (keep.model) {
-	if (fmethod == "arima") {
-      names(model) <- allnames
-    } else if (fmethod == "ets") {
-	  colnames(model) <- allnames
+	if (fmethod != "rw") {
+      colnames(model) <- allnames
     }
   }
   if (keep.intervals) {
