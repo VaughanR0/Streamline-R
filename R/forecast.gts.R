@@ -218,6 +218,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
   }
 
+  # Has all levels here
   pfcasts <- sapply(loopout, function(x) x$pfcasts)
   if (keep.fitted) {
     fits <- sapply(loopout, function(x) x$fitted)
@@ -276,34 +277,34 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
 
   if (method == "comb") {
     if (weights == "none") {
-      bfcasts <- Comb(pfcasts, keep = "bottom", algorithms = alg)
+      bfcasts <- Comb(pfcasts, keep = "all", algorithms = alg)
     } else if (any(weights == c("sd", "nseries"))) {
-      bfcasts <- Comb(pfcasts, weights = wvec, keep = "bottom", 
+      bfcasts <- Comb(pfcasts, weights = wvec, keep = "all", 
                       algorithms = alg)
     } 
   if (keep.fitted) {
       if (weights == "none") {
-        fits <- Comb(fits, keep = "bottom", algorithms = alg)
+        fits <- Comb(fits, keep = "all", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
-        fits <- Comb(fits, weights = wvec, keep = "bottom",
+        fits <- Comb(fits, weights = wvec, keep = "all",
                      algorithms = alg)
       } 
     }
   if (keep.resid) {
       if (weights == "none") {
-        resid <- Comb(resid, keep = "bottom", algorithms = alg)
+        resid <- Comb(resid, keep = "all", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
-        resid <- Comb(resid, weights = wvec, keep = "bottom",
+        resid <- Comb(resid, weights = wvec, keep = "all",
                       algorithms = alg)
       } 
     }
   if (keep.intervals) {
       if (weights == "none") {
-        upper <- Comb(upper, keep = "bottom", algorithms = alg)
-        lower <- Comb(lower, keep = "bottom", algorithms = alg)
+        upper <- Comb(upper, keep = "all", algorithms = alg)
+        lower <- Comb(lower, keep = "all", algorithms = alg)
       } else if (any(weights == c("sd", "nseries"))) {
-        upper <- Comb(upper, weights = wvec, keep = "bottom", algorithms = alg)
-        lower <- Comb(lower, weights = wvec, keep = "bottom", algorithms = alg)
+        upper <- Comb(upper, weights = wvec, keep = "all", algorithms = alg)
+        lower <- Comb(lower, weights = wvec, keep = "all", algorithms = alg)
       } 
     }
   } else if (method == "bu") {
@@ -367,17 +368,17 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
 
   bfcasts <- ts(bfcasts, start = tsp.y[2L] + 1L/tsp.y[3L], 
                 frequency = tsp.y[3L])
-  colnames(bfcasts) <- bnames
+  colnames(bfcasts) <- allnames
   class(bfcasts) <- class(object$bts)
   attr(bfcasts, "msts") <- attr(object$bts, "msts")
 
   if (keep.fitted) {
     bfits <- ts(fits, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bfits) <- bnames
+    colnames(bfits) <- allnames
   } 
   if (keep.resid) {
     bresid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bresid) <- bnames
+    colnames(bresid) <- allnames
   }
   if (keep.model) {
 	if (fmethod != "rw") {
@@ -386,14 +387,20 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   }
   if (keep.intervals) {
     bupper <- ts(upper, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bupper) <- bnames
+    colnames(bupper) <- allnames
     blower <- ts(lower, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(blower) <- bnames
+    colnames(blower) <- allnames
   }
 
   # Output
-  out <- list(bts = bfcasts, histy = object$bts, labels = object$labels,
-              method = method, fmethod = fmethod)
+  if (method == "comb") {
+	  # output all levels
+	  out <- list(bts = bfcasts, histy = y, labels = object$labels,
+				  method = method, fmethod = fmethod)
+  } else {
+	  out <- list(bts = bfcasts, histy = object$bts, labels = object$labels,
+				  method = method, fmethod = fmethod)
+  }
   if (keep.fitted0) {
     out$fitted <- bfits
   }
