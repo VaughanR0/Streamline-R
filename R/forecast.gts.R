@@ -398,7 +398,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
   if (keep.intervals) {
     upper <- pifun(upper)
     upper <- ts(upper, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
-	pinames <- cbind(paste(allnames,".80",sep=""), paste(allnames,".95",sep=""))
+	pinames <- c(paste(allnames,".80",sep=""), paste(allnames,".95",sep=""))
     colnames(upper) <- pinames
     lower <- pifun(lower)
     lower <- ts(lower, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
