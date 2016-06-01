@@ -218,6 +218,16 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
   }
 
+	pifun <- function(x) {
+	  nr2 <- nrow(x)
+	  nr <- nr2 %/% 2
+	  nr1 <- nr+1
+	  x1 <- x[1:nr,]
+	  x2 <- x[nr1:nr2,]
+	  out <- cbind(x1,x2)
+	  return(out)
+	}
+
   # Has all levels here
   pfcasts <- sapply(loopout, function(x) x$pfcasts)
   if (keep.fitted) {
@@ -366,19 +376,19 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     fits <- rbind(rep(NA, ncol(fits)), fits)
   }
 
-  bfcasts <- ts(bfcasts, start = tsp.y[2L] + 1L/tsp.y[3L], 
-                frequency = tsp.y[3L])
-  colnames(bfcasts) <- allnames
-  class(bfcasts) <- class(object$bts)
-  attr(bfcasts, "msts") <- attr(object$bts, "msts")
+  # Convert back to time-series
+  fcasts <- ts(bfcasts, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
+  colnames(fcasts) <- allnames
+  class(fcasts) <- class(object$bts)
+  attr(fcasts, "msts") <- attr(object$bts, "msts")
 
   if (keep.fitted) {
-    bfits <- ts(fits, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bfits) <- allnames
+    fits <- ts(fits, start = tsp.y[1L], frequency = tsp.y[3L])
+    colnames(fits) <- allnames
   } 
   if (keep.resid) {
-    bresid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bresid) <- allnames
+    resid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
+    colnames(resid) <- allnames
   }
   if (keep.model) {
 	if (fmethod != "rw") {
@@ -386,33 +396,36 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     }
   }
   if (keep.intervals) {
-    bupper <- ts(upper, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(bupper) <- allnames
-    blower <- ts(lower, start = tsp.y[1L], frequency = tsp.y[3L])
-    colnames(blower) <- allnames
+    upper <- pifun(upper)
+    upper <- ts(upper, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
+	pinames <- cbind(paste(allnames,".80",sep=""), paste(allnames,".95",sep=""))
+    colnames(upper) <- pinames
+    lower <- pifun(lower)
+    lower <- ts(lower, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
+    colnames(lower) <- pinames
   }
 
   # Output
   if (method == "comb") {
 	  # output all levels
-	  out <- list(bts = bfcasts, histy = y, labels = object$labels,
+	  out <- list(bts = fcasts, histy = y, labels = object$labels,
 				  method = method, fmethod = fmethod)
   } else {
-	  out <- list(bts = bfcasts, histy = object$bts, labels = object$labels,
+	  out <- list(bts = fcasts, histy = object$bts, labels = object$labels,
 				  method = method, fmethod = fmethod)
   }
   if (keep.fitted0) {
-    out$fitted <- bfits
+    out$fitted <- fits
   }
   if (keep.resid) {
-    out$residuals <- bresid
+    out$residuals <- resid
   }
   if (keep.model) {
     out$model <- model
   }
   if (keep.intervals) {
-    out$upper <- bupper
-    out$lower <- blower
+    out$upper <- upper
+    out$lower <- lower
   }
 
   if (is.hts(object)) {
