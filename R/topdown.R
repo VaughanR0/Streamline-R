@@ -1,7 +1,8 @@
 # Top-down approaches only for hts
 TdGsA <- function(fcasts, bts, topts) {
-  # Top-down forecasts based on the average historical proportions. (Gross-Sohl
-  # method A)
+  # Top-down forecasts based on the average historical proportions. (Gross-Sohl method A)
+  # apply function to bts over columns (2), where topts is the top level ts from aggts,
+  # i.e. the sum of the bts rows so we get the average
   div <- apply(bts, 2, function(x) x/topts)
   prop <- colMeans(div, na.rm = TRUE)
   out <- fcasts %*% prop
@@ -9,8 +10,7 @@ TdGsA <- function(fcasts, bts, topts) {
 }
 
 TdGsF <- function(fcasts, bts, topts) {
-  # Top-down forecasts based on the proportions of the historical averages (
-  # Gross-Sohl method F)
+  # Top-down forecasts based on the proportions of the historical averages (Gross-Sohl method F)
   numerator <- colSums(bts, na.rm = TRUE)
   denominator <- sum(topts, na.rm = TRUE)
   prop <- numerator/denominator
@@ -35,7 +35,7 @@ TdFp <- function(fcasts, nodes) {
     }
 
     # Calculate proportions
-    prop <- flist[[2L]]/new.flist[[1L]]
+    prop <- c(flist[[2L]]) / c(new.flist[[1L]])
     if (l.levels > 2L) {
       for (k in 2L:(l.levels - 1L)) {
         prop <- rep(prop, nodes[[k]])

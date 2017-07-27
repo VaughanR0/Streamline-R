@@ -62,3 +62,20 @@ isSeasonal <- function(model, type = c("ets", "arima", "rw"), ...) {
 	}
 	return (flg)
 }
+
+aggtts <- function(y, nodes, labs) {
+	# returns the aggregates at all levels for a component of hts object
+	gmat <- GmatrixH(nodes)
+	levels <- 1L:nrow(gmat)
+
+	# a function to aggregate the time-series, (transpose(y)?? - removed)
+	rSum <- function(y, i) rowsum(t(y), gmat[i,], reorder=FALSE, na.rm=TRUE)
+	ally <- lapply(levels, rSum, y=y)
+	# Convert to matrix while applying a transposition
+	ally <- matrix(unlist(sapply(ally,t)), nrow = nrow(y))
+
+	colnames(ally) <- unlist(labs[levels])
+	y.tsp <- stats::tsp(y)
+	ally <- ts(ally, start=y.tsp[1L], frequency=y.tsp[3L])
+	return(ally)
+}
