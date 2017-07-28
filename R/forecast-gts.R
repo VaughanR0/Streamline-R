@@ -313,7 +313,7 @@ forecast.gts <- function(
     }
     if (keep.model) {
       out$model <- stdModel(models,fmethod)
-		  message(str(out$model))
+	  message(str(out$model))		# does not work
     }
     if (keep.intervals) {
       out$upper <- fc$upper
@@ -342,7 +342,7 @@ forecast.gts <- function(
       loopout <- lapply(y, function(x) loopfn(x, ...))
     } else {
       # only do seasonal at other levels if top level is seasonal
-			print(paste("forecast.gts: using new loop fn which handles level names"))
+			print(paste("forecast.gts: using loop fn seasfn which handles level names"))
 		  # nb only "comb" and "tdfp" have all levels in y !!
       loopout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
     }
@@ -585,7 +585,7 @@ forecast.gts <- function(
   }
   # Output
   # I dont think that y is right here, as different methods generate different y
-	# just bts for historic as well
+  # just bts for historic as well
   # out <- list(bts = fcasts, histy = y, labels = object$labels, method = method, fmethod = fmethod)
   out <- list(bts = fcasts, histy = object$bts, labels = object$labels, method = method, fmethod = fmethod)
   if (keep.fitted0) {

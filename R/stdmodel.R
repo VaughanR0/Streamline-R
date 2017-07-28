@@ -8,7 +8,7 @@ stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 
 	out$type <- type
 	if (type == "ets") {
-		# print("StdModel: doing ets")
+		print("StdModel: doing ets")
 		par <- list()
 		out$loglik <- signif(model$loglik,4)
 		out$aic <- signif(model$aic,4)
