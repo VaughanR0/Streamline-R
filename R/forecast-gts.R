@@ -262,7 +262,9 @@ forecast.gts <- function(
       models <- FUN(x, ...)
       fc <- forecast(models, h = h)
     }
+		str(fc$mean)
     out$pfcasts <- fc$mean
+    out$pfcasts[out$pfcasts<0] <- 0
     if (keep.fitted) {
       out$fitted <- stats::fitted(models)
     }
@@ -305,6 +307,7 @@ forecast.gts <- function(
 	  }
     }
     out$pfcasts <- fc$mean
+    out$pfcasts[out$pfcasts<0] <- 0
     if (keep.fitted) {
       out$fitted <- stats::fitted(models)
     }
@@ -432,49 +435,49 @@ forecast.gts <- function(
   if (method == "comb") {
 		# Method "comb"
     if (weights == "ols") {
-      bfcasts <- Comb(pfcasts, keep = "bts", algorithms = alg)
+      bfcasts <- Comb(pfcasts, keep = "bottom", algorithms = alg)
     } else if (any(weights == c("wls", "nseries"))) {
-      bfcasts <- Comb(pfcasts, weights = wvec, keep = "bts", 
+      bfcasts <- Comb(pfcasts, weights = wvec, keep = "bottom", 
                       algorithms = alg)
     } else { # weights = "mint"
 	  bfcasts <- mint(pfcasts, residual = tmp.resid,
-					  covariance = covariance, keep = "bts", algorithms = alg)
+					  covariance = covariance, keep = "bottom", algorithms = alg)
 	}
 
     if (keep.fitted0) {
       if (weights == "ols") {
-        fits <- Comb(fits, keep = "bts", algorithms = alg)
+        fits <- Comb(fits, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("wls", "nseries"))) {
-        fits <- Comb(fits, weights = wvec, keep = "bts",
+        fits <- Comb(fits, weights = wvec, keep = "bottom",
                      algorithms = alg)
       } else { # weights = "mint"
 	    fits <- mint(fits, residual = tmp.resid,
-					  covariance = covariance, keep = "bts", algorithms = alg)
+					  covariance = covariance, keep = "bottom", algorithms = alg)
       } 
     }
   if (keep.resid) {
       if (weights == "ols") {
-        resid <- Comb(resid, keep = "bts", algorithms = alg)
+        resid <- Comb(resid, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("wls", "nseries"))) {
-        resid <- Comb(resid, weights = wvec, keep = "bts",
+        resid <- Comb(resid, weights = wvec, keep = "bottom",
                       algorithms = alg)
       } else { # weights = "mint"
 	    resid <- mint(resid, residual = tmp.resid,
-					  covariance = covariance, keep = "bts", algorithms = alg)
+					  covariance = covariance, keep = "bottom", algorithms = alg)
       } 
     }
   if (keep.intervals) {
       if (weights == "ols") {
-        upper <- Comb(upper, keep = "bts", algorithms = alg)
-        lower <- Comb(lower, keep = "bts", algorithms = alg)
+        upper <- Comb(upper, keep = "bottom", algorithms = alg)
+        lower <- Comb(lower, keep = "bottom", algorithms = alg)
       } else if (any(weights == c("wls", "nseries"))) {
-        upper <- Comb(upper, weights = wvec, keep = "bts", algorithms = alg)
-        lower <- Comb(lower, weights = wvec, keep = "bts", algorithms = alg)
+        upper <- Comb(upper, weights = wvec, keep = "bottom", algorithms = alg)
+        lower <- Comb(lower, weights = wvec, keep = "bottom", algorithms = alg)
       } else { # weights = "mint"
 	    upper <- mint(upper, residual = tmp.resid,
-					  covariance = covariance, keep = "bts", algorithms = alg)
+					  covariance = covariance, keep = "bottom", algorithms = alg)
 	    lower <- mint(lower, residual = tmp.resid,
-					  covariance = covariance, keep = "bts", algorithms = alg)
+					  covariance = covariance, keep = "bottom", algorithms = alg)
       } 
     }
   } else if (method == "bu") {

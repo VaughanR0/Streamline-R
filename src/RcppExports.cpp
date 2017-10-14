@@ -9,7 +9,7 @@ using namespace Rcpp;
 
 // cgm_c
 MatrixXd cgm_c(SEXP As, SEXP bs);
-RcppExport SEXP hts2_cgm_c(SEXP AsSEXP, SEXP bsSEXP) {
+RcppExport SEXP _hts2_cgm_c(SEXP AsSEXP, SEXP bsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -18,4 +18,14 @@ BEGIN_RCPP
     rcpp_result_gen = Rcpp::wrap(cgm_c(As, bs));
     return rcpp_result_gen;
 END_RCPP
+}
+
+static const R_CallMethodDef CallEntries[] = {
+    {"_hts2_cgm_c", (DL_FUNC) &_hts2_cgm_c, 2},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_hts2(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
 }
