@@ -259,6 +259,9 @@ forecast.gts <- function(
 				# random walk method
 				# print("seasfn: rw: starting randomwalk forecast")
 				fc <- rwf(x, h = h, lambda = lambda, ...)
+				# fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
+				# Not sure that this is the same structure as returned from ets or arima
+				models <- fc$model
 			}
 		} else { # user defined function to produce point forecasts
 			models <- FUN(x, ...)
@@ -269,7 +272,6 @@ forecast.gts <- function(
 		out$pfcasts[out$pfcasts<0] <- 0
 		if (keep.fitted) {
 			if (fmethod != "rw") {
-				# print("seasfn: getting fitted values")
 				out$fitted <- stats::fitted(models)
 			} else {
 				# getting an error from stats::fitted, try this instead
@@ -277,10 +279,20 @@ forecast.gts <- function(
 			}
 		}
 		if (keep.resid) {
-			out$resid <- stats::residuals(models)
+			# out$resid <- stats::residuals(models)
+			# getting an error from stats::residual, try this instead
+			if (fmethod != "rw") {
+				out$resid <- stats::residuals(models)
+			} else {
+				out$resid <- fc$residuals
+			}
 		}
 		if (keep.model) {
-			out$model <- stdModel(models,fmethod)
+			if (fmethod != "rw") {
+				out$model <- stdModel(models,fmethod)
+			} else {
+				out$model <- fc$model
+			}
 		}
 		if (keep.intervals) {
 			out$upper <- fc$upper
@@ -305,6 +317,9 @@ forecast.gts <- function(
 				fc <- forecast(models, h = h, xreg = newxreg)
 			} else if (fmethod == "rw") {
 				fc <- rwf(x, h = h, lambda = lambda, ...)
+				# fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
+				# Not sure that this is the same structure as returned from ets or arima
+				models <- fc$model
 			}
 		} else { # user defined function to produce point forecasts
 			models <- FUN(x, ...)
@@ -326,11 +341,20 @@ forecast.gts <- function(
 			}
 		}
 		if (keep.resid) {
-			out$resid <- stats::residuals(models)
+			# getting an error from stats::residual, try this instead
+			# out$resid <- stats::residuals(models)
+			if (fmethod != "rw") {
+				out$resid <- stats::residuals(models)
+			} else {
+				out$resid <- fc$residuals
+			}
 		}
 		if (keep.model) {
-			out$model <- stdModel(models,fmethod)
-			message(str(out$model))		# does not work
+			if (fmethod != "rw") {
+				out$model <- stdModel(models,fmethod)
+			} else {
+				out$model <- fc$model
+			}
 		}
 		if (keep.intervals) {
 			out$upper <- fc$upper
