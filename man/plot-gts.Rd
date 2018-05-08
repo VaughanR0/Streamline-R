@@ -1,6 +1,6 @@
-\name{plot.gts}
+\name{plot-gts}
 \Rdversion{1.1}
-\alias{plot.gts}
+\alias{plot-gts}
 \title{Plot grouped or hierarchical time series}
 \description{
 Method for plotting grouped or hierarchical time series and their forecasts.

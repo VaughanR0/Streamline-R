@@ -1,6 +1,6 @@
-\name{window.gts}
+\name{window-gts}
 \Rdversion{1.1}
-\alias{window.gts}
+\alias{window-gts}
 \title{Time window of a gts object}
 \description{
 Extracts a subset of the time series from a grouped time series object.

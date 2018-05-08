@@ -1,6 +1,6 @@
-\name{forecast.gts}
+\name{forecast-gts}
 \Rdversion{1.1}
-\alias{forecast.gts}
+\alias{forecast-gts}
 \alias{forecast.hts}
 \title{Forecast a hierarchical or grouped time series}
 \description{
@@ -86,7 +86,7 @@ Gross, C. and Sohl, J. (1990) Dissagregation methods to expedite product line fo
 \author{Earo Wang and Rob J Hyndman}
 
 \seealso{
- \code{\link[hts]{hts}}, \code{\link[hts]{gts}}, \code{\link[hts]{plot.gts}}, \code{\link[hts]{accuracy.gts}}
+ \code{\link[hts]{hts}}, \code{\link[hts]{gts}}, \code{\link[hts]{plot-gts}}, \code{\link[hts]{accuracy-gts}}
 }
 \examples{
 forecast(htseg1, h = 10, method = "bu", fmethod = "arima")
