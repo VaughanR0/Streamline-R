@@ -8,3 +8,5 @@ This can be overridden by setting the do.season=TRUE in the arguments to forecas
 Note that the only function to be modified in this version is forecast.gts and you can use this version
 even if you have the standard hts package installed, by using a namespace prefix to the function, e.g.
 hts2::forecast.gts(...)
+
+This has been updated to hts version 5.1.4 on 6-Nov-2017, by copying the v5.1.4 files to here.
