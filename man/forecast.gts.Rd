@@ -15,7 +15,7 @@ Methods for forecasting hierarchical or grouped time series.
                          algorithms = c("lu", "cg", "chol", "recursive", "slm"),
                          keep.fitted = FALSE, keep.resid = FALSE,
                          keep.model = FALSE, keep.intervals = FALSE,
-						 do.seasonal = FALSE,
+						 do.season = FALSE,
                          positive = FALSE, lambda = NULL, level, 
                          weights = c("sd", "none", "nseries"),
                          parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -31,7 +31,7 @@ Methods for forecasting hierarchical or grouped time series.
   \item{keep.resid}{If TRUE, keep residuals at all levels.}
   \item{keep.model}{If TRUE, keep model descriptions at all levels.}
   \item{keep.intervals}{If TRUE, keep prediction intervals at all levels.}
-  \item{do.seasonal}{If TRUE, allow seasonal models at the lower levels if even the top level is not seasonal.}
+  \item{do.season}{If TRUE, allow seasonal models at the lower levels if even the top level is not seasonal.}
   \item{positive}{If TRUE, forecasts are forced to be strictly positive}
   \item{lambda}{Box-Cox transformation parameter}
   \item{weights}{Weights used for "optimal combination" method. When \code{weights = "sd"},
