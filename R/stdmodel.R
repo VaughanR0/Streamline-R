@@ -23,7 +23,8 @@ stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 		return(out)
 	}
 
-	if (type == "arima") {
+	if (any(type == c("arima", "rw"))) {
+		# "rw" is now specified as an (0,1,0) arima model using Arima() function
 		# print("StdModel: doing arima")
 		par <- list()
 		out$loglik <- signif(model$loglik,4)
@@ -54,11 +55,9 @@ isSeasonal <- function(model, type = c("ets", "arima", "rw"), ...) {
 	if (type == "ets") {
 		flg <- grepl("[MA])", model$method)
 	}
-	if (type == "arima") {
+	if (any(type == c("arima", "rw"))) {
 		# $arma gives a vector with (p, q, P, Q, m, d, D) where m is seasonal frequency
 		flg <- ifelse(model$arma[5] > 0, TRUE, FALSE)
-	}
-	if (type == "rw") {
 	}
 	return (flg)
 }

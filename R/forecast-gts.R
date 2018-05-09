@@ -258,10 +258,15 @@ forecast.gts <- function(
 			} else if (fmethod == "rw") {
 				# random walk method
 				# print("seasfn: rw: starting randomwalk forecast")
-				fc <- rwf(x, h = h, lambda = lambda, ...)
+				# possibly
+				models <- Arima(x, order = c(0,1,0), xreg = xreg, include.drift = TRUE, lambda = lambda)
+				# could be for seasonal
+				# models <- Arima(x, seasonal = list(order=c(0,1,0),period=12), xreg = xreg, include.drift = TRUE, lambda = lambda)
+				fc <- forecast(models, h = h)
+				# fc <- rwf(x, h = h, lambda = lambda, ...)
 				# fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
 				# Not sure that this is the same structure as returned from ets or arima
-				models <- fc$model
+				# models <- fc$model
 			}
 		} else { # user defined function to produce point forecasts
 			models <- FUN(x, ...)
@@ -271,28 +276,30 @@ forecast.gts <- function(
 		out$pfcasts <- fc$mean
 		out$pfcasts[out$pfcasts<0] <- 0
 		if (keep.fitted) {
-			if (fmethod != "rw") {
-				out$fitted <- stats::fitted(models)
-			} else {
+			out$fitted <- stats::fitted(models)
+			#if (fmethod != "rw") {
+			#	out$fitted <- stats::fitted(models)
+			#} else {
 				# getting an error from stats::fitted, try this instead
-				out$fitted <- fc$fitted
-			}
+			#	out$fitted <- fc$fitted
+			#}
 		}
 		if (keep.resid) {
-			# out$resid <- stats::residuals(models)
+			out$resid <- stats::residuals(models)
 			# getting an error from stats::residual, try this instead
-			if (fmethod != "rw") {
-				out$resid <- stats::residuals(models)
-			} else {
-				out$resid <- fc$residuals
-			}
+			#if (fmethod != "rw") {
+			#	out$resid <- stats::residuals(models)
+			#} else {
+			#	out$resid <- fc$residuals
+			#}
 		}
 		if (keep.model) {
-			if (fmethod != "rw") {
-				out$model <- stdModel(models,fmethod)
-			} else {
-				out$model <- fc$model
-			}
+			out$model <- stdModel(models,fmethod)
+			#if (fmethod != "rw") {
+			#	out$model <- stdModel(models,fmethod)
+			#} else {
+			#	out$model <- fc$model
+			#}
 		}
 		if (keep.intervals) {
 			out$upper <- fc$upper
@@ -316,10 +323,13 @@ forecast.gts <- function(
 				models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
 				fc <- forecast(models, h = h, xreg = newxreg)
 			} else if (fmethod == "rw") {
-				fc <- rwf(x, h = h, lambda = lambda, ...)
+				# possibly
+				models <- Arima(x, order = c(0,1,0), xreg = xreg, include.drift = TRUE, lambda = lambda)
+				fc <- forecast(models, h = h)
+				# fc <- rwf(x, h = h, lambda = lambda, ...)
 				# fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
 				# Not sure that this is the same structure as returned from ets or arima
-				models <- fc$model
+				# models <- fc$model
 			}
 		} else { # user defined function to produce point forecasts
 			models <- FUN(x, ...)
@@ -332,29 +342,31 @@ forecast.gts <- function(
 		out$pfcasts <- fc$mean
 		out$pfcasts[out$pfcasts<0] <- 0
 		if (keep.fitted) {
-			if (fmethod != "rw") {
+			out$fitted <- stats::fitted(models)
+			#if (fmethod != "rw") {
 				# print("seasfn: getting fitted values")
-				out$fitted <- stats::fitted(models)
-			} else {
+			#	out$fitted <- stats::fitted(models)
+			#} else {
 				# getting an error from stats::fitted, try this instead
-				out$fitted <- fc$fitted
-			}
+			#	out$fitted <- fc$fitted
+			#}
 		}
 		if (keep.resid) {
 			# getting an error from stats::residual, try this instead
-			# out$resid <- stats::residuals(models)
-			if (fmethod != "rw") {
-				out$resid <- stats::residuals(models)
-			} else {
-				out$resid <- fc$residuals
-			}
+			out$resid <- stats::residuals(models)
+			#if (fmethod != "rw") {
+			#	out$resid <- stats::residuals(models)
+			#} else {
+			#	out$resid <- fc$residuals
+			#}
 		}
 		if (keep.model) {
-			if (fmethod != "rw") {
-				out$model <- stdModel(models,fmethod)
-			} else {
-				out$model <- fc$model
-			}
+			out$model <- stdModel(models,fmethod)
+			#if (fmethod != "rw") {
+			#	out$model <- stdModel(models,fmethod)
+			#} else {
+			#	out$model <- fc$model
+			#}
 		}
 		if (keep.intervals) {
 			out$upper <- fc$upper
