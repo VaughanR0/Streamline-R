@@ -259,9 +259,14 @@ forecast.gts <- function(
 				# random walk method
 				# print("seasfn: rw: starting randomwalk forecast")
 				# possibly
-				models <- Arima(x, order = c(0,1,0), xreg = xreg, include.drift = TRUE, lambda = lambda)
+				if (nnzero(x) == 0) {
+					# fails in optim if the vector is all zero so we dont try to do drift
+					models <- Arima(x, order = c(0,1,0), lambda = lambda)
+				} else {
+					models <- Arima(x, order = c(0,1,0), include.drift = TRUE, lambda = lambda)
+				}
 				# could be for seasonal
-				# models <- Arima(x, seasonal = list(order=c(0,1,0),period=12), xreg = xreg, include.drift = TRUE, lambda = lambda)
+				# models <- Arima(x, seasonal = list(order=c(0,1,0),period=12), include.drift = TRUE, lambda = lambda)
 				fc <- forecast(models, h = h)
 				# fc <- rwf(x, h = h, lambda = lambda, ...)
 				# fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
