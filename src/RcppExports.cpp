@@ -9,7 +9,7 @@ using namespace Rcpp;
 
 // cgm_c
 MatrixXd cgm_c(SEXP As, SEXP bs);
-RcppExport SEXP hts2_cgm_c(SEXP AsSEXP, SEXP bsSEXP) {
+RcppExport SEXP _hts2_cgm_c(SEXP AsSEXP, SEXP bsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,7 +21,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"hts2_cgm_c", (DL_FUNC) &hts2_cgm_c, 2},
+    {"_hts2_cgm_c", (DL_FUNC) &_hts2_cgm_c, 2},
     {NULL, NULL, 0}
 };
 
