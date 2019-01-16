@@ -3,7 +3,7 @@ Type: Package
 Title: Hierarchical and Grouped Time Series
 Version: 5.1
 Depends: R (>= 3.0.2), forecast (>= 5.0), SparseM, Matrix
-Imports: parallel, utils, methods
+Imports: parallel, utils, methods, stats, matrixcalc
 LinkingTo: Rcpp (>= 0.11.0), RcppEigen
 LazyLoad: yes
 LazyData: yes

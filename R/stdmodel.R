@@ -62,8 +62,17 @@ isSeasonal <- function(model, type = c("ets", "arima", "rw"), ...) {
 	return (flg)
 }
 
+#' Returns the aggregates at all levels for a hts object
+#'
+#' @rdname helper-functions
+#' @param y An hts object
+#' @param nodes The node description of the hts object
+#' @param labs The labels of the nodes
+#' @return a multi-variate time-series
+#' @author Vaughan Roberts
+#' @export
 aggtts <- function(y, nodes, labs) {
-	# returns the aggregates at all levels for a component of hts object
+	# returns the aggregates at all levels for a hts object
 	gmat <- GmatrixH(nodes)
 	levels <- 1L:nrow(gmat)
 

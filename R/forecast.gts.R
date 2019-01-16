@@ -196,6 +196,7 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     return(out)
   }
 
+  # require('parallel')
   if (parallel) { # parallel == TRUE
     if (is.null(num.cores)) {
       num.cores <- detectCores()
@@ -205,8 +206,20 @@ forecast.gts <- function(object, h = ifelse(frequency(object$bts) > 1L,
     xreg <- xreg
     newxreg <- newxreg
     cl <- makeCluster(num.cores)
-    loopout <- parSapplyLB(cl = cl, X = y, FUN = function(x) loopfn(x, ...), 
-                           simplify = FALSE)
+    if (do.season) {
+		# do seasonal at any level
+		loopout <- parSapplyLB(cl=cl, X=y, FUN=function(x) loopfn(x, ...), simplify=FALSE)
+    } else {
+		# only do seasonal at other levels if top level is seasonal
+		# see William Dunlap http://r.789695.n4.nabble.com/Parallel-computing-how-to-transmit-multiple-parameters-to-a-function-in-parLapply-td4682667.html
+		# withGlobals <- function(FUN, ...){ environment(FUN) <- list2env(list(...)) FUN } 
+		# loopout <- parSapplyLB(cl=cl, X=seq(to=ncol(y)), withGlobals(seasfn, xall=y, n=colnames(y)), simplify = FALSE)
+		# or possibly
+		# https://stackoverflow.com/questions/47346810/parsapply-with-2-arguments
+		loopout <- parSapplyLB(cl=cl,X=seq(to=ncol(y)),FUN=seasfn,xall=y,n=colnames(y), simplify=FALSE)
+		# non-parallel
+		# loopout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
+	}
     stopCluster(cl = cl)
   } else {  # parallel = FALSE
     if (do.season) {
