@@ -226,49 +226,44 @@ forecast.gts <- function(
     out <- list()
     x <- xall[,i]
 	# print(paste("forecast.gts: seasfn: level:", n[[i]]))
-    if (n[[i]] == "Total") {
-      level0 <- TRUE
-    } else {
-      level0 <- FALSE
-    }
+    level0 <- if (n[[i]] == "Total") TRUE else FALSE
     if (is.null(FUN)) {
       if (fmethod == "ets") {
-        # Disallow seasonal models if level 0 is not seasonal,
+        # NB level0.seas initialised to TRUE above
+		# Disallow seasonal models if level 0 is not seasonal,
 		# this may override user specified parameters
-        if (level0.seas) {
-          modelspec <- "ZZZ"
-        } else {
-          modelspec <- "ZZN"
-        }
+	    modelspec <- if (level0.seas) "ZZZ" else "ZZN"
         # print(paste("seasfn: using ets: model specification", modelspec))
-        models <- ets(x, model=modelspec, lambda = lambda, ...)
+        models <- ets(x, model=modelspec, lambda=lambda, ...)
         if (level0) {
+		  # note use of <<- assignment, i.e. to define variable in global environment
           level0.seas <<- isSeasonal(models, "ets")
           print(paste("seasfn: ets: is seasonal at top level returned", level0.seas))
         }
-        if (keep.intervals) {
-          fc <- forecast(models, h= h)
-        } else {
-          fc <- forecast(models, h=h, PI=FALSE)
-        }
+	    fc <- if (keep.intervals) forecast(models, h=h) else forecast(models, h=h, PI=FALSE)
       } else if (fmethod == "arima") {
         if (level0) {
-          models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+		  # defalult for auto.arima is seasonal=TRUE
+          models <- auto.arima(x, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
           level0.seas <<- isSeasonal(models, "arima")
           print(paste("seasfn: arima: is seasonal at top level returned", level0.seas))
         } else {
-          # This works as they are all logicals
-          allow.seas <- ifelse(level0.seas, TRUE, FALSE)
-          # print(paste("seasfn: using auto.arima: allow seasonal", allow.seas))
-          models <- auto.arima(x, seasonal=allow.seas, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
+          models <- auto.arima(x, seasonal=level0.seas, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
         }
-        fc <- forecast(models, h = h, xreg = newxreg)
+        fc <- forecast(models, h=h, xreg=newxreg)
       } else if (fmethod == "rw") {
-	    # random walk method
-        # fc <- rwf(x, h = h, lambda = lambda, drift=T, ...)
-        fc <- rwf(x, h = h, lambda = lambda, ...)
-		# Not sure that this is the same structure as returned from ets or arima
-		models <- fc$model
+	    # random walk method is arima(0,1,0) and doing it this way guarantees we get the same structure out
+		# check we have some non-zero values
+		# Matrix is imported
+		mdrift <- if(Matrix::nnzero(x) != 0) TRUE else FALSE
+		if (level0) {
+		  models <- Arima(x, order=c(0,1,0), xreg=xreg, include.drift=mdrift, lambda=lamda, ...)
+          level0.seas <<- isSeasonal(models, "rw")
+        } else {
+		  mseas <- if (level0.seas) list(order=c(0,1,0),period=12) else list(order=c(0,0,0))
+		  models <- Arima(x, order=c(0,1,0), seasonal=mseas, include.drift=mdrift, lambda=lambda, xreg=xreg, ...)
+        }
+        fc <- forecast(models, h=h, xreg=newxreg)
       }
     } else { # user defined function to produce point forecasts
       models <- FUN(x, ...)
@@ -278,27 +273,9 @@ forecast.gts <- function(
     out$pfcasts <- fc$mean
 	if (identical(allow.negative,FALSE)) { out$pfcasts[out$pfcasts<0] <- 0 }
 
-    if (keep.fitted) {
-	  if (fmethod != "rw") {
-		  out$fitted <- stats::fitted(models)
-	  } else {
-		  out$fitted <- fc$fitted
-	  }
-    }
-    if (keep.resid) {
-	  if (fmethod != "rw") {
-		  out$resid <- stats::residuals(models)
-	  } else {
-		  out$resid <- fc$residuals
-	  }
-    }
-    if (keep.model) {
-	  if (fmethod != "rw") {
-		  out$model <- stdModel(models,fmethod)
-	  } else {
-		  out$model <- fc$model
-	  }
-    }
+    if (keep.fitted) out$fitted <- stats::fitted(models)
+    if (keep.resid) out$resid <- stats::residuals(models)
+    if (keep.model) out$model <- stdModel(models,fmethod)
     if (keep.intervals) {
       out$upper <- fc$upper
       out$lower <- fc$lower
@@ -306,57 +283,39 @@ forecast.gts <- function(
     return(out)
   }
 
-  # loop function to grab pf, fitted, resid for non-seasonal models
+  # loop function which allows seasonal at all levels to grab pf, fitted, resid
   loopfn <- function(x, ...) {
     out <- list()
     if (is.null(FUN)) {
       if (fmethod == "ets") {
         models <- ets(x, lambda = lambda, ...)
-        if (keep.intervals) {
-          fc <- forecast(models, h= h)
-        } else {
-          fc <- forecast(models, h=h, PI=FALSE)
-        }
+	    fc <- if (keep.intervals) forecast(models, h=h) else forecast(models, h=h, PI=FALSE)
       } else if (fmethod == "arima") {
-        models <- auto.arima(x, lambda = lambda, xreg = xreg, parallel = FALSE, ...)
-        fc <- forecast(models, h = h, xreg = newxreg)
+		# defalult is seasonal=TRUE
+        models <- auto.arima(x, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
+        fc <- forecast(models, h=h, xreg=newxreg)
       } else if (fmethod == "rw") {
-        fc <- rwf(x, h = h, lambda = lambda, ...)
-        # fc <- rwf(x, h = h, lambda = lambda, drift=T ...)
-		models <- fc$model
+		# Matrix is imported
+		mdrift <- if(Matrix::nnzero(x) != 0) TRUE else FALSE
+	    # random walk method is arima(0,1,0) and doing it this way guarantees we get the same structure out
+		# default is seasonal=c(0,0,0)
+		models <- Arima(x, order=c(0,1,0), seasonal=list(order=c(0,1,0),period=12), xreg=xreg, include.drift=mdrift, lambda=lamda, ...)
+        fc <- forecast(models, h=h, xreg=newxreg)
       }
     } else { # user defined function to produce point forecasts
       models <- FUN(x, ...)
 	  if (is.null(newxreg)) {
-		  fc <- forecast(models, h = h)
+		  fc <- forecast(models, h=h)
 		} else {
-		  fc <- forecast(models, h = h, xreg = newxreg)
+		  fc <- forecast(models, h=h, xreg=newxreg)
 		}
     }
     out$pfcasts <- fc$mean
 	if (identical(allow.negative,FALSE)) { out$pfcasts[out$pfcasts<0] <- 0 }
 
-    if (keep.fitted) {
-	  if (fmethod != "rw") {
-		  out$fitted <- stats::fitted(models)
-	  } else {
-		  out$fitted <- fc$fitted
-	  }
-    }
-    if (keep.resid) {
-	  if (fmethod != "rw") {
-		  out$resid <- stats::residuals(models)
-	  } else {
-		  out$resid <- fc$residuals
-	  }
-    }
-    if (keep.model) {
-	  if (fmethod != "rw") {
-		  out$model <- stdModel(models,fmethod)
-	  } else {
-		  out$model <- fc$model
-	  }
-    }
+    if (keep.fitted) out$fitted <- stats::fitted(models)
+    if (keep.resid) out$resid <- stats::residuals(models)
+    if (keep.model) out$model <- stdModel(models,fmethod)
     if (keep.intervals) {
       out$upper <- fc$upper
       out$lower <- fc$lower
