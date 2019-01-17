@@ -3,12 +3,16 @@
 \alias{gts}
 \alias{print.gts}
 \alias{summary.gts}
+\alias{is.gts}
 \title{Create a grouped time series}
 \description{
 Method for creating grouped time series. 
 }
 \usage{
 gts(y, groups, gnames = rownames(groups), characters)
+is.gts(xts)
+\method{print}{gts}(x, ...)
+\method{summary}{gts}(object, ...)
 }
 \arguments{
   \item{y}{A matrix or multivariate time series contains the bottom level series.}
@@ -39,6 +43,10 @@ gts(y, groups, gnames = rownames(groups), characters)
   the use of \code{characters} only supports 2-way cross-products for grouping variables.
   Specifying \code{groups} is more general (but more complicated), as any combination of 
   grouping variables can be used.}
+  \item{xts}{\code{gts} object.}
+  \item{x}{\code{gts} object.}
+  \item{...}{Extra arguments passed to \code{print} and \code{summary}.}
+  \item{object}{\code{gts} object.}
 }
 \value{
   \item{bts}{Multivariate time series contains the bottom level series}

@@ -7,36 +7,49 @@
 Methods for forecasting hierarchical or grouped time series.
 }
 \usage{
-\S3method{forecast}{gts}(object, h = ifelse(frequency(object$bts) > 1L,
-                         2L * frequency(object$bts), 10L), 
-                         method = c("comb", "bu", "mo", 
-                                    "tdgsa", "tdgsf", "tdfp"),
-                         fmethod = c("ets", "arima", "rw"), 
-                         algorithms = c("lu", "cg", "chol", "recursive", "slm"),
-                         keep.fitted = FALSE, keep.resid = FALSE,
-                         keep.model = FALSE, keep.intervals = FALSE,
-						 do.season = FALSE,
-                         positive = FALSE, lambda = NULL, level, 
-                         weights = c("sd", "none", "nseries"),
-                         parallel = FALSE, num.cores = 2, FUN = NULL,
-                         xreg = NULL, newxreg = NULL, ...) 
+\S3method{forecast}{gts}(object,
+		h = ifelse(frequency(object$bts) > 1L, 2L * frequency(object$bts), 10L), 
+		method = c("comb", "bu", "mo", "tdgsa", "tdgsf", "tdfp"),
+		weights = c("wls", "ols", "mint", "nseries"),
+		fmethod = c("ets", "arima", "rw"), 
+		algorithms = c("lu", "cg", "chol", "recursive", "slm"),
+		covariance = c("shr", "sam"),
+		keep.fitted = FALSE, keep.resid = FALSE,
+		keep.model = FALSE, keep.intervals = FALSE,
+		do.season = FALSE, allow.negative = FALSE,
+		positive = FALSE, lambda = NULL, level, 
+		parallel = FALSE, num.cores = 2, FUN = NULL,
+		xreg = NULL, newxreg = NULL, ...)
 }
 \arguments{
   \item{object}{Hierarchical or grouped time series object of class \code{{gts}}}
   \item{h}{Forecast horizon}
   \item{method}{Method for distributing forecasts within the hierarchy. See details}
+  \item{weights}{Weights used for "optimal combination" method:
+		\code{weights="ols"} uses an unweighted combination (as described in Hyndman et al 2011);
+		\code{weights="wls"} uses weights based on forecast variances (as described in Hyndman et al 2015);
+		\code{weights="mint"} uses a full covariance estimate to determine the weights (as described in Hyndman et al 2016);
+		\code{weights="nseries"} uses weights based on the number of series aggregated at each node.}
   \item{fmethod}{Forecasting method to use}
-  \item{algorithms}{An algorithm to be used for computing optimally reconciled forecasts.}
+  \item{algorithms}{An algorithm to be used for computing the combination forecasts (i.e. when \code{method=="comb"}).
+	The combination forecasts are based on an ill-conditioned regression model.
+	"lu" indicates LU decomposition is used;
+	"cg" indicates a conjugate gradient method;
+	"chol" corresponds to a Cholesky decomposition;
+	"recursive" indicates the recursive hierarchical algorithm of Hyndman et al (2015);
+	"slm" uses sparse linear regression.
+	Note that \code{algorithms = "recursive"} and \code{algorithms = "slm"} cannot be used if \code{weights="mint"}.}
+  \item{covariance}{Type of the covariance matrix to be used with \code{weights="mint"}:
+	either a shrinkage estimator (\code{"shr"}) with shrinkage towards the diagonal;
+	or a sample covariance matrix (\code{"sam"}).}
   \item{keep.fitted}{If TRUE, keep fitted values at all levels.}
   \item{keep.resid}{If TRUE, keep residuals at all levels.}
   \item{keep.model}{If TRUE, keep model descriptions at all levels.}
   \item{keep.intervals}{If TRUE, keep prediction intervals at all levels.}
   \item{do.season}{If TRUE, allow seasonal models at the lower levels if even the top level is not seasonal.}
+  \item{allow.negative}{If TRUE, forecasts are not truncated to 0 when negative use this as setting \code{lambda=0} requires all bts to be strictly positive and in my experience this is not reliable anyway - probably due to re-allocation between levels.}
   \item{positive}{If TRUE, forecasts are forced to be strictly positive}
   \item{lambda}{Box-Cox transformation parameter}
-  \item{weights}{Weights used for "optimal combination" method. When \code{weights = "sd"},
-  it takes account of the standard deviation of forecasts;
-  when \code{weights} = "nseries", weights are equal to the inverse of row sums of the summing matrix.}
   \item{level}{Level used for "middle-out" method (only used when \code{method="mo"})}
   \item{parallel}{If TRUE, import \code{parallel} package to allow parallel processing}
   \item{num.cores}{If parallel = TRUE, specify how many cores are going to be used}

@@ -1,32 +1,44 @@
-export(
-hts,
-gts,
-aggts,
-aggtts,
-allts,
-combinef,
-smatrix
-)
+export(MinT)
+export(accuracy.gts)
+export(aggts)
+export(aggtts)
+export(allts)
+export(combinef)
+export(forecast.gts)
+export(get_groups)
+export(get_nodes)
+export(gts)
+export(hts)
+export(is.gts)
+export(is.hts)
+export(plot.gts)
+export(print.gts)
+export(print.hts)
+export(smatrix)
+export(summary.gts)
+export(summary.hts)
 
-S3method(print, gts)
-S3method(print, hts)
-S3method(forecast, gts)
-S3method(window, gts)
-S3method(plot, gts)
-S3method(accuracy, gts)
-S3method(summary, gts)
-S3method(summary, hts)
+S3method(accuracy,gts)
+S3method(forecast,gts)
+S3method(plot,gts)
+S3method(print,gts)
+S3method(print,hts)
+S3method(summary,gts)
+S3method(summary,hts)
+S3method(window,gts)
 
-import(forecast)
-import(SparseM)
-import(parallel)
 import(Matrix)
-importFrom("stats", "window")
-importFrom("stats", "fitted", "frequency", "is.ts", "residuals", "time", "ts", "tsp", "tsp<-")
+import(SparseM)
+import(forecast)
+import(grDevices)
+import(parallel)
+
+importFrom("stats", "fitted", "frequency", "is.ts", "as.ts", "na.omit", "residuals", "time", "ts", "tsp", "tsp<-", "window")
 importFrom("utils", "combn")
 importFrom("grDevices", "rainbow")
 importFrom("graphics", "lines", "par", "plot", "strwidth", "text")
 importFrom("methods", "new")
 importFrom("matrixcalc", "is.positive.definite")
+importFrom("utils", "str")
 
 useDynLib(hts2)

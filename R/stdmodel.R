@@ -65,18 +65,19 @@ isSeasonal <- function(model, type = c("ets", "arima", "rw"), ...) {
 #' Returns the aggregates at all levels for a hts object
 #'
 #' @rdname helper-functions
-#' @param y An hts object
-#' @param nodes The node description of the hts object
+#' @param y A time-series object, e.g. h$bts, where h is a hts object
+#' @param nodes The node description of the hts object, a list
 #' @param labs The labels of the nodes
 #' @return a multi-variate time-series
 #' @author Vaughan Roberts
 #' @export
 aggtts <- function(y, nodes, labs) {
-	# returns the aggregates at all levels for a hts object
+	# returns the aggregates at all levels for a time-series object
+	if (!is.ts(y)) stop("'y' must be a time-series object", call. = FALSE)
 	gmat <- GmatrixH(nodes)
 	levels <- 1L:nrow(gmat)
 
-	# a function to aggregate the time-series, (transpose(y)?? - removed)
+	# a function to aggregate the time-series, (sums row of transpose(y))
 	rSum <- function(y, i) rowsum(t(y), gmat[i,], reorder=FALSE, na.rm=TRUE)
 	ally <- lapply(levels, rSum, y=y)
 	# Convert to matrix while applying a transposition

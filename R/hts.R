@@ -46,7 +46,6 @@
 #' # Suppose we've got the bottom names that can be useful for constructing the node
 #' # structure and the labels at higher levels. We need to specify how to split them 
 #' # in the argument "characters".
-#' library(hts2)
 #' abc <- ts(5 + matrix(sort(rnorm(1000)), ncol = 10, nrow = 100))
 #' colnames(abc) <- c("A10A", "A10B", "A10C", "A20A", "A20B",
 #'                    "B30A", "B30B", "B30C", "B40A", "B40B")

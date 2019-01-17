@@ -1,12 +1,21 @@
 \name{hts}
 \Rdversion{1.1}
 \alias{hts}
+\alias{is.hts}
+\alias{print.hts}
+\alias{summary.hts}
 \title{Create a hierarchical time series}
 \description{
 Method for creating hierarchical time series.  
 }
 \usage{
 hts(y, nodes, bnames = colnames(y), characters)
+
+is.hts(xts)
+
+\method{print}{hts}(x, ...)
+
+\method{summary}{hts}(object, ...)
 }
 \arguments{
   \item{y}{A matrix or multivariate time series contain the bottom level series.}
@@ -22,6 +31,10 @@ hts(y, nodes, bnames = colnames(y), characters)
   be specified as \code{c(3, 4)} referring to states of 3 characters (e.g., "VIC") and 
   cities of 4 characters (e.g., "Melb") All the bottom names must be of the same length,
   with number of characters for each segment the same for all series.}
+  \item{xts}{\code{hts} object.}
+  \item{x}{\code{hts} object.}
+  \item{...}{Extra arguments passed to \code{print} and \code{summary}.}
+  \item{object}{\code{hts} object.}
 }
 \value{
   \item{bts}{Multivariate time series containing the bottom level series}
@@ -52,7 +65,7 @@ x <- hts(abc, nodes)
 # Suppose we've got the bottom names that can be useful for constructing the node
 # structure and the labels at higher levels. We need to specify how to split them 
 # in the argument "characters".
-library(hts)
+library(hts2)
 abc <- ts(5 + matrix(sort(rnorm(1000)), ncol = 10, nrow = 100))
 colnames(abc) <- c("A10A", "A10B", "A10C", "A20A", "A20B",
                    "B30A", "B30B", "B30C", "B40A", "B40B")
