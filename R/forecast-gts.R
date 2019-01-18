@@ -1,24 +1,24 @@
 #' Forecast a hierarchical or grouped time series
-#' 
+#'
 #' Methods for forecasting hierarchical or grouped time series.
-#' 
+#'
 #' Base methods implemented include ETS, ARIMA and the naive (random walk)
 #' models. Forecasts are distributed in the hierarchy using bottom-up,
 #' top-down, middle-out and optimal combination methods.
-#' 
+#'
 #' Three top-down methods are available: the two Gross-Sohl methods and the
 #' forecast-proportion approach of Hyndman, Ahmed, and Athanasopoulos (2011).
 #' The "middle-out" method \code{"mo"} uses bottom-up (\code{"bu"}) for levels
 #' higher than \code{level} and top-down forecast proportions (\code{"tdfp"})
 #' for levels lower than \code{level}.
-#' 
+#'
 #' For non-hierarchical grouped data, only bottom-up and combination methods
 #' are possible, as any method involving top-down disaggregation requires a
 #' hierarchical ordering of groups.
-#' 
+#'
 #' When \code{xreg} and \code{newxreg} are passed, the same covariates are
 #' applied to every series in the hierarchy.
-#' 
+#'
 #' @aliases forecast.gts forecast.hts
 #' @param object Hierarchical or grouped time series object of class
 #' \code{{gts}}
@@ -82,52 +82,52 @@
 #' @references G. Athanasopoulos, R. A. Ahmed and R. J. Hyndman (2009)
 #' Hierarchical forecasts for Australian domestic tourism, \emph{International
 #' Journal of Forecasting}, \bold{25}, 146-166.
-#' 
+#'
 #' R. J. Hyndman, R. A. Ahmed, G. Athanasopoulos and H.L. Shang (2011) Optimal
 #' combination forecasts for hierarchical time series. \emph{Computational
 #' Statistics and Data Analysis}, \bold{55}(9), 2579--2589.
 #' \url{http://robjhyndman.com/papers/hierarchical/}
-#' 
+#'
 #' Hyndman, R. J., Lee, A., & Wang, E. (2015). Fast computation of reconciled
 #' forecasts for hierarchical and grouped time series. \emph{Computational
 #' Statistics and Data Analysis}, \bold{97}, 16--32.
 #' \url{http://robjhyndman.com/papers/hgts/}
-#' 
+#'
 #' Wickramasuriya, S. L., Athanasopoulos, G., & Hyndman, R. J. (2015).
 #' Forecasting hierarchical and grouped time series through trace minimization.
 #' \emph{Working paper 15/15, Department of Econometrics & Business Statistics,
 #' Monash University.} \url{http://robjhyndman.com/working-papers/mint/}
-#' 
+#'
 #' Gross, C. and Sohl, J. (1990) Dissagregation methods to expedite product
 #' line forecasting, \emph{Journal of Forecasting}, \bold{9}, 233-254.
 #' @keywords ts
 #' @method forecast gts
 #' @examples
-#' 
+#'
 #' forecast(htseg1, h = 10, method = "bu", fmethod = "arima")
-#' 
+#'
 #' \dontrun{
 #'   forecast(
 #'     htseg2, h = 10, method = "comb", algorithms = "lu",
 #'     FUN = function(x) tbats(x, use.parallel = FALSE)
 #'   )
 #' }
-#' 
+#'
 #' @export
 #' @export forecast.gts
 
 forecast.gts <- function(
 		object,
-		h = ifelse(frequency(object$bts) > 1L, 2L * frequency(object$bts), 10L), 
+		h = ifelse(frequency(object$bts) > 1L, 2L * frequency(object$bts), 10L),
 		method = c("comb", "bu", "mo", "tdgsa", "tdgsf", "tdfp"),
 		weights = c("wls", "ols", "mint", "nseries"),
-		fmethod = c("ets", "arima", "rw"), 
+		fmethod = c("ets", "arima", "rw"),
 		algorithms = c("lu", "cg", "chol", "recursive", "slm"),
 		covariance = c("shr", "sam"),
 		keep.fitted = FALSE, keep.resid = FALSE,
 		keep.model = FALSE, keep.intervals = FALSE,
 		do.season = FALSE, allow.negative = FALSE,
-		positive = FALSE, lambda = NULL, level, 
+		positive = FALSE, lambda = NULL, level,
 		parallel = FALSE, num.cores = 2, FUN = NULL,
 		xreg = NULL, newxreg = NULL, ...) {
   # Forecast hts or gts objects
@@ -164,7 +164,7 @@ forecast.gts <- function(
   if (h < 1L) {
     stop("Argument h must be positive.", call. = FALSE)
   }
-  if (!is.hts(object) && 
+  if (!is.hts(object) &&
       is.element(method, c("mo", "tdgsf", "tdgsa", "tdfp"))) {
     stop("Argument method is not appropriate for a non-hierarchical time series.", call. = FALSE)
   }
@@ -208,16 +208,19 @@ forecast.gts <- function(
 
   # Set up forecast methods
   if (any(method == c("comb", "tdfp"))) { # Combination or tdfp
-    y <- aggts(object)  # Grab all ts
+    yagg <- aggts(object)  # Grab all ts
   } else if (method == "bu") {  # Bottom-up approach
-    y <- object$bts  # Only grab the bts
+    yagg <- object$bts  # Only grab the bts
   } else if (any(method == c("tdgsa", "tdgsf")) && method != "tdfp") {
-    y <- aggts(object, levels = 0)  # Grab the top ts
+    yagg <- aggts(object, levels = 0)  # Grab the top ts
   } else if (method == "mo") {
-    y <- aggts(object, levels = level)
+    yagg <- aggts(object, levels = level)
   }
-  ynames <- colnames(y)
+  ynames <- colnames(yagg)
   print(paste("forecast.gts: using method", method, "; number of object columns:", length(ynames)))
+  # reduce the work done in forecasts by only doing unique time-series
+  r <- redparams(yagg)
+  y <- yagg[,r$uniq]
   level0.seas <- TRUE
 
   # Different version of loopfn which can determine when we are doing level0
@@ -336,23 +339,24 @@ forecast.gts <- function(
 		# do seasonal at any level
 		# Probably should just use parLapplyLB as the simplify=FALSE arg essentially implies that parSapplyLB is the same
 		# loopout <- parSapplyLB(cl=cl, X=y, FUN=function(x) loopfn(x, ...), simplify=FALSE)
-		loopout <- parLapplyLB(cl=cl, X=y, FUN=function(x) loopfn(x, ...))
+		lout <- parLapplyLB(cl=cl, X=y, FUN=function(x) loopfn(x, ...))
     } else {
 		# only do seasonal at other levels if top level is seasonal
 		# https://stackoverflow.com/questions/47346810/parsapply-with-2-arguments
 		# loopout <- parSapplyLB(cl=cl,X=seq(to=ncol(y)),FUN=seasfn,xall=y,n=colnames(y), simplify=FALSE)
-		loopout <- parLapplyLB(cl=cl,X=seq(to=ncol(y)),FUN=seasfn,xall=y,n=colnames(y))
+		lout <- parLapplyLB(cl=cl,X=seq(to=ncol(y)),FUN=seasfn,xall=y,n=colnames(y))
 	}
     stopCluster(cl = cl)
   } else {  # parallel = FALSE
     if (do.season) {
       # do seasonal at any level
-      loopout <- lapply(y, function(x) loopfn(x, ...))
+      lout <- lapply(y, function(x) loopfn(x, ...))
     } else {
       # only do seasonal at other levels if top level is seasonal
-      loopout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
+      lout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
     }
   }
+  loopout <- lapply(seq(to=ncol(yagg)),FUN=rebuild,y=lout,u=r$uniq,m=r$map)
   # the top level names seem to be missing, so re-apply them
   names(loopout) <- ynames
 
@@ -444,7 +448,7 @@ pifun <- function(x) {
     } else { # weights = "mint"
       bfcasts <- mint(pfcasts, residual = tmp.resid, covariance = covariance, keep = "bottom", algorithms = alg)
 	}
- 
+
     if (keep.fitted0) {
   	  if (weights == "ols") {
   		fits <- Comb(fits, keep = "bottom", algorithms = alg)
@@ -452,7 +456,7 @@ pifun <- function(x) {
   		fits <- Comb(fits, weights = wvec, keep = "bottom", algorithms = alg)
   	  } else { # weights = "mint"
   		 fits <- mint(fits, residual = tmp.resid, covariance = covariance, keep = "bottom", algorithms = alg)
-  		} 
+  		}
   	}
     if (keep.resid) {
   	  if (weights == "ols") {
@@ -461,7 +465,7 @@ pifun <- function(x) {
   		resid <- Comb(resid, weights = wvec, keep = "bottom", algorithms = alg)
   	  } else { # weights = "mint"
   		  resid <- mint(resid, residual = tmp.resid, covariance = covariance, keep = "bottom", algorithms = alg)
-  	  } 
+  	  }
   	}
     if (keep.intervals) {
   	  if (weights == "ols") {
@@ -473,7 +477,7 @@ pifun <- function(x) {
   	  } else { # weights = "mint"
   		 upper <- mint(upper, residual = tmp.resid, covariance = covariance, keep = "bottom", algorithms = alg)
   		 lower <- mint(lower, residual = tmp.resid, covariance = covariance, keep = "bottom", algorithms = alg)
-  	  } 
+  	  }
   	}
 
   # Method "bu"
@@ -562,7 +566,7 @@ pifun <- function(x) {
     fits <- ts(fits, start = tsp.y[1L], frequency = tsp.y[3L])
 	# print(paste("forecast.gts: fitted columns:", ncol(fits)))
     colnames(fits) <- onames
-  } 
+  }
   if (keep.resid) {
     resid <- ts(resid, start = tsp.y[1L], frequency = tsp.y[3L])
 	# print(paste("forecast.gts: resid columns:", ncol(resid)))
