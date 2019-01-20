@@ -191,6 +191,7 @@ forecast.gts <- function(
 		keep.fitted <- TRUE
 	}
 
+	multilevel <- if (any(method == c("comb", "tdfp"))) TRUE else FALSE
 	# Set up "level" for middle-out
 	if (method == "mo") {
 		len <- length(object$nodes)
@@ -203,11 +204,11 @@ forecast.gts <- function(
 		} else {
 			mo.nodes <- object$nodes[level:len]
 			level <- seq(level, len)
+			multilevel <- if (length(level) > 1) TRUE else FALSE
 		}
 	}
 
 	# Set up forecast methods
-	allts <- if (any(method == c("comb", "tdfp"))) TRUE else FALSE
 	if (any(method == c("comb", "tdfp"))) { # Combination or tdfp
 		yagg <- aggts(object)	# Grab all ts
 	} else if (method == "bu") {	# Bottom-up approach
@@ -220,8 +221,9 @@ forecast.gts <- function(
 	ynames <- colnames(yagg)
 	print(paste("forecast.gts: using method", method, "; number of object columns:", length(ynames)))
 	# reduce the work done in hts forecasts by only doing unique time-series
-	if (is_hts && allts && allow.reduced) {
-		red <- redparams(yagg,object$nodes)
+	if (is_hts && multilevel && allow.reduced) {
+		nd <- if (method == "mo") mo.nodes else object$nodes
+		red <- redparams(nd)
 		y <- yagg[,red$uniq]
 	} else {
 		y <- yagg
@@ -359,7 +361,7 @@ loopfn <- function(x, ...) {
 			lout <- lapply(seq(to=ncol(y)), seasfn, xall=y, n=colnames(y))
 		}
 	}
-	if (is_hts && allts && allow.reduced && !all(red$uniq)) {
+	if (is_hts && multilevel && allow.reduced && !all(red$uniq)) {
 		print(paste("forecast.gts: rebuilding original matrix with forecasts, red type is ", typeof(red)))
 		loopout <- lapply(seq(to=ncol(yagg)),FUN=rebuild,y=lout,u=red$uniq,m=red$map)
 		# reassign original to y as well

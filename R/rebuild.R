@@ -67,6 +67,8 @@ makeuniqv <- function(nodes) {
 	# first element should never be 1
 	cnt <- nodes[[1]]+1
 	uniqv[1:cnt] <- TRUE
+	if (length(nodes) < 2) return(uniqv)
+
 	for (i in 2:length(nodes)) {
 		sindx <- do.call(sum, nodes[1:i-1]) + 1
 		maxj <- length(nodes[[i]])
@@ -100,9 +102,13 @@ makemapv <- function(nodes,uniqv) {
 	mapv[1] <- 0
 	tmpv <- vector()
 	maxi <- length(nodes)
+	if (maxi < 2) {
+		mapv[1:total.nodes] <- 0
+		return(mapv)
+	}
 	for (i in 2:maxi) {
 		ln <- i - 2
-		sindx <- if (i > 2) do.call(sum, nodes[1:ln]) else 1
+		sindx <- if (i > 2) do.call(sum, nodes[1:ln]) + 1 else 1
 		maxj <- length(nodes[[i]])
 		if (mdebug) print(paste("makemapv: list element ", i, " start index ", sindx, " length of list element ", maxj))
 		for (j in 1:maxj) {
