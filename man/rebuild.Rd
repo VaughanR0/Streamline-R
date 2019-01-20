@@ -18,12 +18,12 @@ rebuild(i, y, u, m)
 }
 \author{Vaughan Roberts}
 
-\seealso{\code{\link[hts]{allts}}}
+\seealso{\code{\link[hts]{aggts}}}
 
 \examples{
 	\dontrun{
 		yagg <- aggts(htseg3)
-		r <- redparams(yagg)
+		r <- redparams(htseg3$nodes)
 		# remove unnecessary columns prior to forecasts
 		y <- yagg[,r$uniq]
 		...

@@ -41,23 +41,23 @@ rebuild <- function(i,y,u,m) {
 #' @seealso forecast.gts part of the hts2 package
 #' 
 #' @example
-#' red <- redparams(htseg3)
+#' red <- redparams(htseg3$nodes)
 #' \dontrun{
 #' fally <- ally[,red$uniq]
 #' ... do forecast loop in forecast.gts
 #' ally1 <- lapply(seq(to=ncol(ally)),FUN=rebuild,y=fally,u=red$uniq,m=red$map)
 #' }
-redparams <- function(y,nodes) {
-	if (!is.ts(y)) stop("Argument y must be a time-series object.", call. = FALSE)
-	uniqv <- makeuniqv(y,nodes)
-	mapv <- makemapv(y,nodes,uniqv)
+redparams <- function(nodes) {
+	if (!is.list(nodes)) stop("Argument nodes must be a list.", call. = FALSE)
+	uniqv <- makeuniqv(nodes)
+	mapv <- makemapv(nodes,uniqv)
 	
 	out <- setNames(list(uniqv, mapv), c("uniq", "map"))
 	return(out)	
 }
 
-makeuniqv <- function(y,nodes) {
-	if (!is.ts(y)) stop("Argument y must be a time-series object.", call. = FALSE)
+makeuniqv <- function(nodes) {
+	if (!is.list(nodes)) stop("Argument nodes must be a list.", call. = FALSE)
 	mdebug <- FALSE
 	if (length(nodes[[1]]) == 1 && nodes[[1]][1] == 1) stop("Incorrect nodes list, the first element should not be 1", call. = FALSE)	
 	# number of columns to create for vector (+1 for Total column)
@@ -87,8 +87,8 @@ makeuniqv <- function(y,nodes) {
 	return(uniqv)
 }
 
-makemapv <- function(y,nodes,uniqv) {
-	if (!is.ts(y)) stop("Argument y must be a time-series object.", call. = FALSE)
+makemapv <- function(nodes,uniqv) {
+	if (!is.list(nodes)) stop("Argument nodes must be a list.", call. = FALSE)
 	mdebug <- FALSE
 	if (length(nodes[[1]]) == 1 && nodes[[1]][1] == 1) stop("Incorrect nodes list, the first element should not be 1", call. = FALSE)
 	# number of columns to create for vector (+1 for Total column)
