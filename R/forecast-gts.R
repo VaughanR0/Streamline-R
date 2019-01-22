@@ -537,6 +537,9 @@ mint <- function(x, ...) {
 	}
 
 	# Convert back to time-series
+	# bfcasts will have different sets data depending on the method above, e.g.
+	# tdfp - only bts
+	# comb - all levels
 	fcasts <- ts(bfcasts, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
 	fcols <- ncol(fcasts)
 	if (fcols == length(bnames)) {
@@ -544,7 +547,7 @@ mint <- function(x, ...) {
 	} else if (fcols == length(ynames)) {
 		onames = ynames
 	} else {
-		print(paste("forecast.gts: base level forecasts number of columns:", fcols))
+		print(paste("forecast.gts: bottom level forecasts number of columns:", fcols))
 	}
 	colnames(fcasts) <- onames
 	class(fcasts) <- class(object$bts)
@@ -581,7 +584,8 @@ mint <- function(x, ...) {
 	}
 
 	# Output
-	# output all levels for fcasts and bottom level for historic
+	# output a variety of levels for fcasts (depending on method) and bottom level for historic
+	# for fits, resid and intervals we recreate the higher levels outside of this function using aggts()
 	out <- list(bts = fcasts, histy = object$bts, labels = object$labels, method = method, fmethod = fmethod)
 
 	if (keep.fitted0) out$fitted <- fits
@@ -593,7 +597,8 @@ mint <- function(x, ...) {
 	if (keep.model) {
 		model <- list()
 		model <- lapply(seq(to=ncol(y)), copyModel, y=loopout)
-		names(model) <- onames
+		# we have all models for all levels here
+		names(model) <- ynames
 		out$model <- model
 	}
 

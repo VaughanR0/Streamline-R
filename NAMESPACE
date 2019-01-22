@@ -35,7 +35,6 @@ import(parallel)
 
 importFrom("stats", "fitted", "frequency", "is.ts", "as.ts", "na.omit", "residuals", "time", "ts", "tsp", "tsp<-", "window", "setNames")
 importFrom("utils", "combn")
-importFrom("grDevices", "rainbow")
 importFrom("graphics", "lines", "par", "plot", "strwidth", "text")
 importFrom("methods", "new")
 importFrom("matrixcalc", "is.positive.definite")
