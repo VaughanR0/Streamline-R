@@ -587,7 +587,7 @@ mint <- function(x, ...) {
 		ucols <- ncol(upper) %/% 2
 		if (ucols == length(bnames)) {
 			pinames <- c(paste(bnames,".80",sep=""), paste(bnames,".95",sep=""))
-		} else if (cols == length(ynames)) {
+		} else if (ucols == length(ynames)) {
 			pinames <- c(paste(ynames,".80",sep=""), paste(ynames,".95",sep=""))
 		}
 		colnames(upper) <- pinames
