@@ -64,5 +64,6 @@ TdFp <- function(fcasts, nodes) {
     }
     out <- fcasts[, 1L] * prop
   }
+  # effectively bts as proportions of fcasts[,Total] (vector mult of [h x 1] * [h x num(bts)])
   return(out)
 }

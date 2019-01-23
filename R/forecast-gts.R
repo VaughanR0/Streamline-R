@@ -373,6 +373,8 @@ loopfn <- function(x, ...) {
 	names(loopout) <- ynames
 
 pifun <- function(x) {
+	# convert prediction intervals from [up80; up90] to [up80 up90]
+	# i.e. from having twice the number of rows to have twice the number of columns
 	nr2 <- nrow(x)
 	nr <- nr2 %/% 2
 	nr1 <- nr+1
@@ -382,8 +384,9 @@ pifun <- function(x) {
 	return(out)
 }
 
+	# Extract components as lists from the loopout list, i.e. pfcasts, fits, resid, upper and lower
+	# sapply returns a list after applying the function to each element of loopout
 	# Has all levels here, because lapply() has run for each element and level
-	# sapply returns a list after applying the fuction to each element of loopout
 	# nb keep.model is picked up below as it does not depend on the method
 	pfcasts <- sapply(loopout, function(x) x$pfcasts)
 	str(pfcasts)
@@ -400,7 +403,8 @@ pifun <- function(x) {
 
 	# Set up basic info
 	tsp.y <- tsp(y)
-	bnames <- colnames(object$bts)
+	bnames <- colnames(object$bts)		# bottom level names
+	total.cols <- ncol(pfcasts)
 
 	if (method == "comb") { # Assign class
 		class(pfcasts) <- class(object)
@@ -442,7 +446,9 @@ mint <- function(x, ...) {
 	}
 }
 
-	# We only use bts here and rely on predict.R to get the aggts (using aggtts())
+# We adjust and extract only the bts here
+# rely on predict.R to get the aggts (using aggtts())
+
 	# Method "comb"
 	if (method == "comb") {
 		if (weights == "ols") {
@@ -510,12 +516,23 @@ mint <- function(x, ...) {
 
 	# Method "tdfp"
 	} else if (method == "tdfp") {
+		# TdFp creates matrix of proportions for bts only (e.g. h x num(bts) matrix)
+		# which is vector multiplied with pfcasts[,Total] to give adjusted bts forecasts
+		# pfcasts[,Total] * prop
+		# pfcasts has dimensions of h x allhts 
 		bfcasts <- TdFp(pfcasts, object$nodes)
+		# fits and resid have dimensions of num(histy) x allhts 
 		if (keep.fitted0) fits <- TdFp(fits, object$nodes)
 		if (keep.resid) resid <- TdFp(resid, object$nodes)
 		if (keep.intervals) {
-			upper <- TdFp(upper, object$nodes)
-			lower <- TdFp(lower, object$nodes)
+			# Does not make sense to aggregate prediction intervals at each level
+			# Probably should take proportions of middle levels as well, but this will approximate it
+			# upper has dimensions of 2*h x allhts, [up80; up95]
+			bupper <- TdFp(upper, object$nodes)
+			agg.cols <- total.cols - ncol(bupper)
+			upper <- cbind(upper[,1:agg.cols],bupper)
+			blower <- TdFp(lower, object$nodes)
+			lower <- cbind(lower[,1:agg.cols],blower)
 		}
 
 	# Method "mo"
@@ -537,9 +554,10 @@ mint <- function(x, ...) {
 	}
 
 	# Convert back to time-series
-	# bfcasts will have different sets data depending on the method above, e.g.
-	# tdfp - only bts
-	# comb - all levels
+	# bfcasts might have different sets data depending on the method used above, e.g.
+	# comb & tdfp - only bts
+	print(paste("forecast.gts: total forecasts is ", total.cols, ", total in bfcasts is ", ncol(bfcasts)))
+
 	fcasts <- ts(bfcasts, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
 	fcols <- ncol(fcasts)
 	if (fcols == length(bnames)) {
@@ -566,9 +584,12 @@ mint <- function(x, ...) {
 	if (keep.intervals) {
 		upper <- pifun(upper)
 		upper <- ts(upper, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
-		ucols <- ncol(upper)
-		# print(paste("forecast.gts: upper predictio interval number of columns:", ucols))
-		pinames <- c(paste(onames,".80",sep=""), paste(onames,".95",sep=""))
+		ucols <- ncol(upper) %/% 2
+		if (ucols == length(bnames)) {
+			pinames <- c(paste(bnames,".80",sep=""), paste(bnames,".95",sep=""))
+		} else if (cols == length(ynames)) {
+			pinames <- c(paste(ynames,".80",sep=""), paste(ynames,".95",sep=""))
+		}
 		colnames(upper) <- pinames
 		lower <- pifun(lower)
 		lower <- ts(lower, start = tsp.y[2L] + 1L/tsp.y[3L], frequency = tsp.y[3L])
