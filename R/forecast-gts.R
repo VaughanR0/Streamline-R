@@ -389,7 +389,6 @@ pifun <- function(x) {
 	# Has all levels here, because lapply() has run for each element and level
 	# nb keep.model is picked up below as it does not depend on the method
 	pfcasts <- sapply(loopout, function(x) x$pfcasts)
-	str(pfcasts)
 	if (keep.fitted) fits <- sapply(loopout, function(x) x$fitted)
 	if (keep.resid) resid <- sapply(loopout, function(x) x$resid)
 	if (keep.intervals) {

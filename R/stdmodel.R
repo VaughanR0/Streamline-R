@@ -1,6 +1,7 @@
 stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 	# returns model parameters in a consistent list structure
 	out <- list()
+	mdebug <- FALSE
 	# print("stdModel: model")
 	# print(model)
 	# print("stdModel: structure")
@@ -8,14 +9,13 @@ stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 
 	out$type <- type
 	if (type == "ets") {
-		print("StdModel: doing ets")
 		par <- list()
 		out$loglik <- signif(model$loglik,4)
 		out$aic <- signif(model$aic,4)
 		out$aicc <- signif(model$aicc,4)
 		out$bic <- signif(model$bic,4)
 		out$sigma2 <- signif(model$sigma2,4)
-		# print(paste("StdModel: loglik", out$loglik, "aic", out$aic, "aicc", out$aicc, "bic", out$bic, "sigma", out$sigma2))
+		if (mdebug) print(paste("StdModel: ETS: loglik", out$loglik, "aic", out$aic, "aicc", out$aicc, "bic", out$bic, "sigma", out$sigma2))
 		par$E <- model$components[1]
 		par$T <- model$components[2]
 		par$S <- model$components[3]
@@ -25,14 +25,13 @@ stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 
 	if (any(type == c("arima", "rw"))) {
 		# "rw" is now specified as an (0,1,0) arima model using Arima() function
-		# print("StdModel: doing arima")
 		par <- list()
 		out$loglik <- signif(model$loglik,4)
 		out$aic <- signif(model$aic,4)
 		out$aicc <- signif(model$aicc,4)
 		out$bic <- signif(model$bic,4)
 		out$sigma2 <- signif(model$sigma2,4)
-		# print(paste("StdModel: loglik", out$loglik, "aic", out$aic, "aicc", out$aicc, "bic", out$bic, "sigma", out$sigma2))
+		if (mdebug) print(paste("StdModel: arima: loglik", out$loglik, "aic", out$aic, "aicc", out$aicc, "bic", out$bic, "sigma", out$sigma2))
 		par$p <- model$arma[1]
 		par$q <- model$arma[2]
 		par$d <- model$arma[6]
@@ -43,7 +42,7 @@ stdModel <- function(model, type = c("ets", "arima", "rw"), ...) {
 		# Do drift or non-zero-mean as well
 		par$drift <- signif(model$coef[grepl('drift',names(model$coef))],4)
 		par$intercept <- signif(model$coef[grepl('intercept',names(model$coef))],4)
-		# print(paste("StdModel: drift", par$drift, "intercept", par$intercept))
+		if (mdebug) print(paste("StdModel: drift", par$drift, "intercept", par$intercept))
 		out$par <- par
 		return(out)
 	}
