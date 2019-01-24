@@ -19,16 +19,23 @@
 #' }
 
 rebuild <- function(i,y,u,m) {
-	mdebug <- FALSE
+	mdebug <- TRUE
 	# y is now a list with each forecast as an element in the list
 	if (!u[i]) {
 		uc<-m[i]
+		# get the lowest column with the same data
+		while (m[uc] > 0) uc <- m[uc]
+		# check that lowest column does not have missing columns before it
+		# otherwise adjust column number to that of the reduced matrix (list)
+		cnt <- sum(u[1:uc])		# number of Trues before uc
+		# nb cnt always >= 1 as u[1] must be True
+		uc <- if (cnt < uc) cnt else uc
 		# copy earlier column
-		if (mdebug) print(paste("rebuild: col ",i," adding back col ",uc))		
+		if (mdebug) print(paste("rebuild: col ",i," copying reduced col ",uc))		
 		out <- if (uc>0) y[[uc]]
 	} else {
-		curr <- sum(u[1:i])
-		if (mdebug) print(paste("rebuild: col ",i," using col ",curr))		
+		curr <- sum(u[1:i])		# number of Trues
+		if (mdebug) print(paste("rebuild: col ",i," using reduced col ",curr))		
 		out <- y[[curr]]
 	}
 	return(out)

@@ -362,7 +362,7 @@ loopfn <- function(x, ...) {
 		}
 	}
 	if (is_hts && multilevel && allow.reduced && !all(red$uniq)) {
-		print(paste("forecast.gts: rebuilding original matrix with forecasts, red type is ", typeof(red)))
+		print(paste("forecast.gts: rebuilding original list with forecasts, red type is ", typeof(red)))
 		loopout <- lapply(seq(to=ncol(yagg)),FUN=rebuild,y=lout,u=red$uniq,m=red$map)
 		# reassign original to y as well
 		y <- yagg
