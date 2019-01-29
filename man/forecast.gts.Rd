@@ -15,7 +15,7 @@ Methods for forecasting hierarchical or grouped time series.
 		algorithms = c("lu", "cg", "chol", "recursive", "slm"),
 		covariance = c("shr", "sam"),
 		keep.fitted = FALSE, keep.resid = FALSE,
-		keep.model = FALSE, keep.intervals = FALSE,
+		keep.model = FALSE, keep.intervals = FALSE, seasonok = TRUE,
 		do.season = FALSE, allow.negative = TRUE, allow.reduced = FALSE,
 		positive = FALSE, lambda = NULL, level, 
 		parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -46,6 +46,7 @@ Methods for forecasting hierarchical or grouped time series.
   \item{keep.resid}{If TRUE, keep residuals at all levels.}
   \item{keep.model}{If TRUE, keep model descriptions at all levels.}
   \item{keep.intervals}{If TRUE, keep prediction intervals at all levels.}
+  \item{seasonok}{If TRUE, allow seasonal models.}
   \item{do.season}{If TRUE, allow seasonal models at the lower levels if even the top level is not seasonal.}
   \item{allow.negative}{If FALSE, forecasts are truncated to 0 when negative; use this as setting \code{lambda=0} requires all bts to be strictly positive and in my experience this is not reliable anyway - probably due to re-allocation between levels.}
   \item{allow.reduced}{If TRUE, attempt to reduce the number of duplicate forecasts when forecasting all levels, which is done if method is "comb" or "tdfp"}

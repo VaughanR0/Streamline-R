@@ -49,6 +49,9 @@
 #' @param keep.resid If TRUE, keep residuals at the bottom level.
 #' @param keep.intervals If TRUE, keep prediction intervals at the bottom level.
 #' @param keep.model If TRUE, keep model parameters for all levels.
+#' @param seasonok If TRUE, there is enough data to fit a seasonal model
+#' @param do.season If TRUE, do seasonal models at lower levels
+#' even if the top level model is not seasonal
 #' @param allow.negative If TRUE, forecasts are not truncated to 0 when negative
 #' use this as setting \code{lambda=0} requires all bts to be strictly positive and
 #' in my experience this is not reliable anyway - probably due to re-allocation between levels
@@ -125,7 +128,7 @@ forecast.gts <- function(
 		algorithms = c("lu", "cg", "chol", "recursive", "slm"),
 		covariance = c("shr", "sam"),
 		keep.fitted = FALSE, keep.resid = FALSE,
-		keep.model = FALSE, keep.intervals = FALSE,
+		keep.model = FALSE, keep.intervals = FALSE, seasonok = TRUE,
 		do.season = FALSE, allow.negative = TRUE, allow.reduced = FALSE,
 		positive = FALSE, lambda = NULL, level,
 		parallel = FALSE, num.cores = 2, FUN = NULL,
@@ -242,20 +245,20 @@ seasfn <- function(xall, n, i, ...) {
 			# NB level0.seas initialised to TRUE above
 			# Disallow seasonal models if level 0 is not seasonal,
 			# this may override user specified parameters
-			modelspec <- if (level0.seas) "ZZZ" else "ZZN"
+			modelspec <- if (seasonok && level0.seas) "ZZZ" else "ZZN"
 			# print(paste("seasfn: using ets: model specification", modelspec))
 			models <- ets(x, model=modelspec, lambda=lambda, ...)
 			if (level0) {
-			# note use of <<- assignment, i.e. to define variable in global environment
-				level0.seas <<- isSeasonal(models, "ets")
+				# note use of <<- assignment, i.e. to define variable in global environment
+				level0.seas <<- if (seasonok) isSeasonal(models, "ets") else FALSE
 				print(paste("seasfn: ets: is seasonal at top level returned", level0.seas))
 			}
 			fc <- if (keep.intervals) forecast(models, h=h) else forecast(models, h=h, PI=FALSE)
-			} else if (fmethod == "arima") {
-				if (level0) {
+		} else if (fmethod == "arima") {
+			if (level0) {
 				# default for auto.arima is seasonal=TRUE
-				models <- auto.arima(x, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
-				level0.seas <<- isSeasonal(models, "arima")
+				models <- auto.arima(x, seasonal=seasonok, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
+				level0.seas <<- if (seasonok) isSeasonal(models, "arima") else FALSE
 				print(paste("seasfn: arima: is seasonal at top level returned", level0.seas))
 			} else {
 				models <- auto.arima(x, seasonal=level0.seas, lambda=lambda, xreg=xreg, parallel=FALSE, ...)
@@ -267,8 +270,9 @@ seasfn <- function(xall, n, i, ...) {
 			# Matrix is imported
 			mdrift <- if(Matrix::nnzero(x) != 0) TRUE else FALSE
 			if (level0) {
-				models <- Arima(x, order=c(0,1,0), xreg=xreg, include.drift=mdrift, lambda=lambda, ...)
-				level0.seas <<- isSeasonal(models, "rw")
+				mseas <- if (seasonok) list(order=c(0,1,0),period=12) else list(order=c(0,0,0))
+				models <- Arima(x, order=c(0,1,0), seasonal=mseas, xreg=xreg, include.drift=mdrift, lambda=lambda, ...)
+				level0.seas <<- if (seasonok) isSeasonal(models, "rw") else FALSE
 			} else {
 				mseas <- if (level0.seas) list(order=c(0,1,0),period=12) else list(order=c(0,0,0))
 				models <- Arima(x, order=c(0,1,0), seasonal=mseas, include.drift=mdrift, lambda=lambda, xreg=xreg, ...)
